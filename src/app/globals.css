@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+:root {
+  /* Brand yellow ramp — the single loud colour of the system */
+  --yellow-100: #fff3d6;
+  --yellow-200: #ffe49b;
+  --yellow-300: #ffd34e;
+  --yellow-400: #ffc220;
+  --yellow-500: #ffb100;
+  --yellow-600: #f09a00;
+  --yellow-700: #c97d00;
+
+  /* Ink neutrals — near-black to hairline */
+  --ink-900: #141414;
+  --ink-800: #242424;
+  --ink-700: #3d3d3d;
+  --ink-600: #5c5c5c;
+  --ink-500: #767676;
+  --ink-400: #9b9b9b;
+  --ink-300: #c4c4c4;
+  --ink-200: #e2e2e2;
+  --ink-100: #f0f0f0;
+
+  --paper: #ffffff;
+  --paper-2: #f4f4f4;
+  --paper-3: #ededed;
+
+  --status-success: #2fa96b;
+  --status-danger: #e4572e;
+  --status-info: #2b6cb0;
+  --status-warning: var(--yellow-500);
+
+  --shadow-panel: 0 24px 60px rgba(20, 20, 20, 0.14);
+  --shadow-card: 0 8px 24px rgba(20, 20, 20, 0.08);
+  --shadow-raised: 0 4px 12px rgba(20, 20, 20, 0.1);
+  --overlay-scrim: rgba(20, 20, 20, 0.55);
+
+  --radius-button: 999px;
+  --radius-card: 0px;
+
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 400ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@theme inline {
+  --color-yellow-100: var(--yellow-100);
+  --color-yellow-200: var(--yellow-200);
+  --color-yellow-300: var(--yellow-300);
+  --color-yellow-400: var(--yellow-400);
+  --color-yellow-500: var(--yellow-500);
+  --color-yellow-600: var(--yellow-600);
+  --color-yellow-700: var(--yellow-700);
+
+  --color-ink-900: var(--ink-900);
+  --color-ink-800: var(--ink-800);
+  --color-ink-700: var(--ink-700);
+  --color-ink-600: var(--ink-600);
+  --color-ink-500: var(--ink-500);
+  --color-ink-400: var(--ink-400);
+  --color-ink-300: var(--ink-300);
+  --color-ink-200: var(--ink-200);
+  --color-ink-100: var(--ink-100);
+
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-paper-3: var(--paper-3);
+
+  --color-status-success: var(--status-success);
+  --color-status-danger: var(--status-danger);
+  --color-status-info: var(--status-info);
+  --color-status-warning: var(--status-warning);
+
+  --font-display: var(--font-nunito), system-ui, sans-serif;
+  --font-body: var(--font-nunito-sans), system-ui, sans-serif;
+  --font-mono-app: var(--font-jetbrains-mono), ui-monospace, monospace;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink-900);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  color: var(--ink-900);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+::selection {
+  background: var(--yellow-300);
+  color: var(--ink-900);
+}
+
+@keyframes pran-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pran-now {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.pran-rise {
+  animation: pran-rise 0.4s var(--ease-out) both;
+}
+
+.pran-now {
+  animation: pran-now 1.4s ease-in-out infinite;
+}
