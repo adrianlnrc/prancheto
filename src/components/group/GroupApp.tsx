@@ -23,8 +23,7 @@ import { FilaScreen } from "./FilaScreen";
 import { TimesScreen } from "./TimesScreen";
 import { PosScreen, type PosResult } from "./PosScreen";
 import { HistoricoScreen } from "./HistoricoScreen";
-import { PlayerSheet } from "./PlayerSheet";
-import { PinSheet } from "./PinSheet";
+import { PlayerActionSheet } from "./PlayerActionSheet";
 
 type Screen = "chegada" | "sorteio" | "fila" | "times" | "pos" | "historico";
 
@@ -40,7 +39,6 @@ export function GroupApp({ slug }: { slug: string }) {
   const [lastDraw, setLastDraw] = useState<{ a: string; b: string } | null>(null);
   const [posResult, setPosResult] = useState<PosResult | null>(null);
   const [sheetPlayerId, setSheetPlayerId] = useState<string | null>(null);
-  const [pinPlayerId, setPinPlayerId] = useState<string | null>(null);
 
   useEffect(() => {
     // Reads localStorage — an external system, not derived state.
@@ -98,35 +96,28 @@ export function GroupApp({ slug }: { slug: string }) {
 
   const round = data.round;
   const sheetPlayer = data.players.find((p) => p.id === sheetPlayerId) ?? null;
-  const pinPlayer = data.players.find((p) => p.id === pinPlayerId) ?? null;
 
-  const sheets = (
-    <>
-      <PlayerSheet
-        player={sheetPlayer}
-        onClose={() => setSheetPlayerId(null)}
-        onRename={async (name) => {
-          if (sheetPlayer) await renamePlayer(sheetPlayer.id, name);
-          setSheetPlayerId(null);
-        }}
-        onLesionado={async () => {
-          if (sheetPlayer) await markInjured(sheetPlayer.id);
-          setSheetPlayerId(null);
-        }}
-        onRemover={async () => {
-          if (sheetPlayer) await removePlayer(sheetPlayer.id);
-          setSheetPlayerId(null);
-        }}
-      />
-      <PinSheet
-        player={pinPlayer}
-        onClose={() => setPinPlayerId(null)}
-        onFixar={async (slot) => {
-          if (pinPlayer) await setPin(pinPlayer.id, slot);
-          setPinPlayerId(null);
-        }}
-      />
-    </>
+  const sheet = (
+    <PlayerActionSheet
+      player={sheetPlayer}
+      onClose={() => setSheetPlayerId(null)}
+      onRename={async (name) => {
+        if (sheetPlayer) await renamePlayer(sheetPlayer.id, name);
+        setSheetPlayerId(null);
+      }}
+      onLesionado={async () => {
+        if (sheetPlayer) await markInjured(sheetPlayer.id);
+        setSheetPlayerId(null);
+      }}
+      onRemover={async () => {
+        if (sheetPlayer) await removePlayer(sheetPlayer.id);
+        setSheetPlayerId(null);
+      }}
+      onFixar={async (slot) => {
+        if (sheetPlayer) await setPin(sheetPlayer.id, slot);
+        setSheetPlayerId(null);
+      }}
+    />
   );
 
   if (screen === "historico") {
@@ -186,7 +177,7 @@ export function GroupApp({ slug }: { slug: string }) {
           onGoFila={() => setScreen("fila")}
           onOpenSheet={setSheetPlayerId}
         />
-        {sheets}
+        {sheet}
       </Shell>
     );
   }
@@ -231,7 +222,7 @@ export function GroupApp({ slug }: { slug: string }) {
             await recordMatchResult(round.id, "draw");
           }}
         />
-        {sheets}
+        {sheet}
       </Shell>
     );
   }
@@ -246,7 +237,6 @@ export function GroupApp({ slug }: { slug: string }) {
         onGoFila={() => setScreen("fila")}
         onAddPlayer={(name) => addPlayer(round.id, name)}
         onOpenSheet={setSheetPlayerId}
-        onOpenPin={setPinPlayerId}
         sorteando={sorteando}
         onSortear={async () => {
           setSorteando(true);
@@ -262,7 +252,7 @@ export function GroupApp({ slug }: { slug: string }) {
           }
         }}
       />
-      {sheets}
+      {sheet}
     </Shell>
   );
 }

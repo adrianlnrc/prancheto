@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { PressableRow } from "./PressableRow";
 import type { Group, Player, Round } from "@/lib/types";
 import { canDraw, missingForNextDraw } from "@/lib/game/derive";
 
@@ -13,7 +14,6 @@ export function ChegadaScreen({
   onGoFila,
   onAddPlayer,
   onOpenSheet,
-  onOpenPin,
   onSortear,
   sorteando,
 }: {
@@ -24,7 +24,6 @@ export function ChegadaScreen({
   onGoFila: () => void;
   onAddPlayer: (name: string) => void;
   onOpenSheet: (playerId: string) => void;
-  onOpenPin: (playerId: string) => void;
   onSortear: () => void;
   sorteando: boolean;
 }) {
@@ -94,57 +93,14 @@ export function ChegadaScreen({
           </Button>
         </div>
 
-        {arrival.map((p, i) => {
-          const isWaiting = !p.team_id;
-          const status = p.team_id
-            ? "num time"
-            : p.pin_slot
-              ? "fixado"
-              : "esperando";
-          return (
-            <div
-              key={p.id}
-              onClick={() => onOpenSheet(p.id)}
-              className="flex cursor-pointer items-center gap-3 border-b border-ink-200 py-[15px]"
-            >
-              <span className="min-w-[24px] font-mono-app text-[13px] font-bold text-ink-400">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <span
-                className={[
-                  "flex-1 font-display text-[21px] font-bold leading-[1.1]",
-                  isWaiting ? "text-ink-900" : "text-ink-400",
-                ].join(" ")}
-              >
-                {p.name}
-              </span>
-              {isWaiting && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenPin(p.id);
-                  }}
-                  className="font-display text-[11px] font-bold uppercase tracking-[0.12em] text-yellow-700"
-                >
-                  fixar
-                </button>
-              )}
-              <span
-                className={[
-                  "font-display text-[11px] font-bold uppercase tracking-[0.14em]",
-                  p.team_id ? "text-ink-500" : p.pin_slot ? "text-yellow-700" : "text-ink-300",
-                ].join(" ")}
-              >
-                {status}
-              </span>
-            </div>
-          );
-        })}
+        {arrival.map((p, i) => (
+          <PlayerRow key={p.id} player={p} n={i + 1} onOpenSheet={onOpenSheet} />
+        ))}
 
         <div className="h-2" />
         <p className="font-body text-xs text-ink-400">
-          Toque num nome pra editar ou tirar. &quot;Fixar&quot; separa craques em times
-          diferentes antes do sorteio.
+          Toque e segure um nome pra editar, fixar craque, marcar machucado ou tirar da
+          lista.
         </p>
       </div>
 
@@ -158,5 +114,45 @@ export function ChegadaScreen({
         </Button>
       </div>
     </div>
+  );
+}
+
+function PlayerRow({
+  player: p,
+  n,
+  onOpenSheet,
+}: {
+  player: Player;
+  n: number;
+  onOpenSheet: (playerId: string) => void;
+}) {
+  const isWaiting = !p.team_id;
+  const status = p.team_id ? "num time" : p.pin_slot ? "fixado" : "esperando";
+
+  return (
+    <PressableRow
+      onLongPress={() => onOpenSheet(p.id)}
+      className="flex items-center gap-3 border-b border-ink-200 py-[15px]"
+    >
+      <span className="min-w-[24px] font-mono-app text-[13px] font-bold text-ink-400">
+        {String(n).padStart(2, "0")}
+      </span>
+      <span
+        className={[
+          "flex-1 font-display text-[21px] font-bold leading-[1.1]",
+          isWaiting ? "text-ink-900" : "text-ink-400",
+        ].join(" ")}
+      >
+        {p.name}
+      </span>
+      <span
+        className={[
+          "font-display text-[11px] font-bold uppercase tracking-[0.14em]",
+          p.team_id ? "text-ink-500" : p.pin_slot ? "text-yellow-700" : "text-ink-300",
+        ].join(" ")}
+      >
+        {status}
+      </span>
+    </PressableRow>
   );
 }

@@ -5,28 +5,32 @@ import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
 import type { Player } from "@/lib/types";
 
-export function PlayerSheet({
+export function PlayerActionSheet({
   player,
   onClose,
   onRename,
   onLesionado,
   onRemover,
+  onFixar,
 }: {
   player: Player | null;
   onClose: () => void;
   onRename: (name: string) => void;
   onLesionado: () => void;
   onRemover: () => void;
+  onFixar: (slot: "first" | "second" | null) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(player?.name ?? "");
 
   if (!player) return null;
 
+  const isWaiting = !player.team_id;
+
   return (
     <BottomSheet open={!!player} onClose={onClose}>
       <div className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-ink-500">
-        {player.team_id ? "No time" : "Na fila de espera"}
+        {isWaiting ? "Na fila de espera" : "No time"}
       </div>
       <div className="h-2" />
       {editing ? (
@@ -58,7 +62,33 @@ export function PlayerSheet({
             Editar nome
           </Button>
         )}
-        {player.team_id && (
+
+        {isWaiting && (
+          <div className="flex flex-col">
+            <button
+              onClick={() => onFixar("first")}
+              className="w-full border-t border-ink-200 py-4 text-left font-display text-lg font-bold"
+            >
+              Fixar no primeiro time da leva
+            </button>
+            <button
+              onClick={() => onFixar("second")}
+              className="w-full border-t border-b border-ink-200 py-4 text-left font-display text-lg font-bold"
+            >
+              Fixar no segundo time da leva
+            </button>
+            {player.pin_slot && (
+              <button
+                onClick={() => onFixar(null)}
+                className="w-full py-4 text-left font-display text-lg font-bold text-status-danger"
+              >
+                Tirar a fixação
+              </button>
+            )}
+          </div>
+        )}
+
+        {!isWaiting && (
           <div>
             <Button variant="outline" fullWidth onClick={onLesionado}>
               Saiu machucado
@@ -68,6 +98,7 @@ export function PlayerSheet({
             </div>
           </div>
         )}
+
         <button
           onClick={onRemover}
           className="flex min-h-[52px] items-center justify-center border-2 border-status-danger font-display text-[13px] font-bold uppercase tracking-[0.12em] text-status-danger"
