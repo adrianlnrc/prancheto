@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
+import { PressableRow } from "./PressableRow";
 import type { Player, Round, Team } from "@/lib/types";
 import { waitingPlayers } from "@/lib/game/derive";
 
@@ -70,17 +71,8 @@ export function TimesScreen({
                 </div>
               </div>
               <div className="grid grid-cols-2">
-                {roster.map((p) => (
-                  <div
-                    key={p.id}
-                    onClick={() => onOpenSheet(p.id)}
-                    className="flex cursor-pointer items-baseline gap-2 border-t border-ink-200 px-3.5 py-2.5"
-                  >
-                    <span className="font-mono-app text-[11px] font-bold text-ink-400">
-                      {String(roster.indexOf(p) + 1).padStart(2, "0")}
-                    </span>
-                    <span className="font-display text-base font-bold">{p.name}</span>
-                  </div>
+                {roster.map((p, i) => (
+                  <TeamPlayerRow key={p.id} player={p} n={i + 1} onOpenSheet={onOpenSheet} />
                 ))}
               </div>
               <div className="border-t border-ink-200 px-3.5 py-2 font-body text-xs text-ink-500">
@@ -98,19 +90,54 @@ export function TimesScreen({
             De fora ({waiting.length})
           </div>
           {waiting.map((p, i) => (
-            <div
-              key={p.id}
-              onClick={() => onOpenSheet(p.id)}
-              className="flex cursor-pointer items-baseline gap-2.5 border-b border-ink-200 py-2.5"
-            >
-              <span className="font-mono-app text-xs font-bold text-ink-400">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <span className="flex-1 font-display text-lg font-bold">{p.name}</span>
-            </div>
+            <WaitingPlayerRow key={p.id} player={p} n={i + 1} onOpenSheet={onOpenSheet} />
           ))}
         </div>
       </div>
     </div>
+  );
+}
+
+function TeamPlayerRow({
+  player: p,
+  n,
+  onOpenSheet,
+}: {
+  player: Player;
+  n: number;
+  onOpenSheet: (playerId: string) => void;
+}) {
+  return (
+    <PressableRow
+      onLongPress={() => onOpenSheet(p.id)}
+      className="flex items-baseline gap-2 border-t border-ink-200 px-3.5 py-2.5"
+    >
+      <span className="font-mono-app text-[11px] font-bold text-ink-400">
+        {String(n).padStart(2, "0")}
+      </span>
+      <span className="font-display text-base font-bold">{p.name}</span>
+    </PressableRow>
+  );
+}
+
+function WaitingPlayerRow({
+  player: p,
+  n,
+  onOpenSheet,
+}: {
+  player: Player;
+  n: number;
+  onOpenSheet: (playerId: string) => void;
+}) {
+  return (
+    <PressableRow
+      onLongPress={() => onOpenSheet(p.id)}
+      className="flex items-baseline gap-2.5 border-b border-ink-200 py-2.5"
+    >
+      <span className="font-mono-app text-xs font-bold text-ink-400">
+        {String(n).padStart(2, "0")}
+      </span>
+      <span className="flex-1 font-display text-lg font-bold">{p.name}</span>
+    </PressableRow>
   );
 }
