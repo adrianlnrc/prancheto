@@ -10,6 +10,7 @@ import {
   recordMatchResult,
   removePlayer,
   renamePlayer,
+  reshuffleDraw,
   setPin,
   startRound,
 } from "@/lib/game/actions";
@@ -143,9 +144,18 @@ export function GroupApp({ slug }: { slug: string }) {
           teamA={data.teams.find((t) => t.id === lastDraw.a)}
           teamB={data.teams.find((t) => t.id === lastDraw.b)}
           players={data.players}
+          sorteando={sorteando}
           onVoltar={() => {
             setLastDraw(null);
             setScreen("chegada");
+          }}
+          onSortearNovo={async () => {
+            setSorteando(true);
+            try {
+              await reshuffleDraw(round.id, lastDraw.a, lastDraw.b);
+            } finally {
+              setSorteando(false);
+            }
           }}
         />
       </Shell>
