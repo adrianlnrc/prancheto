@@ -41,6 +41,18 @@ async function teamRowCount(roundId: string) {
   return data!;
 }
 
+async function teamAMembers(roundId: string, teamAId: string) {
+  const { data } = await supabase
+    .from("players")
+    .select("id")
+    .eq("round_id", roundId)
+    .eq("team_id", teamAId);
+  return data!
+    .map((p) => p.id)
+    .sort()
+    .join(",");
+}
+
 describe("reshuffle_draw", () => {
   it("reshuffles the same two teams without creating new ones", async () => {
     const { round, teamAId, teamBId } = await setupDrawnRound();
@@ -61,6 +73,48 @@ describe("reshuffle_draw", () => {
     const { a, b } = await rosterSizes(round.id, teamAId, teamBId);
     expect(a).toBe(TEAM_SIZE);
     expect(b).toBe(TEAM_SIZE);
+  });
+
+  it("actually changes who's on each team across repeated reshuffles", async () => {
+    // Balanced counts alone don't prove anything moved — a no-op reshuffle
+    // leaves counts balanced too, since it started that way. Assert the
+    // membership itself varies across enough tries to rule out a no-op.
+    const { round, teamAId, teamBId } = await setupDrawnRound();
+
+    const seen = new Set<string>();
+    for (let i = 0; i < 8; i++) {
+      const { error } = await supabase.rpc("reshuffle_draw", {
+        p_round_id: round.id,
+        p_team_a_id: teamAId,
+        p_team_b_id: teamBId,
+      });
+      expect(error).toBeNull();
+      seen.add(await teamAMembers(round.id, teamAId));
+    }
+    expect(seen.size).toBeGreaterThan(1);
+  });
+
+  it("actually changes the unpinned rest with a single pinned player", async () => {
+    const { round, players, teamAId, teamBId } = await setupDrawnRound(["first"]);
+
+    const seen = new Set<string>();
+    for (let i = 0; i < 8; i++) {
+      const { error } = await supabase.rpc("reshuffle_draw", {
+        p_round_id: round.id,
+        p_team_a_id: teamAId,
+        p_team_b_id: teamBId,
+      });
+      expect(error).toBeNull();
+      seen.add(await teamAMembers(round.id, teamAId));
+
+      const { data: pinnedPlayer } = await supabase
+        .from("players")
+        .select("team_id")
+        .eq("id", players[0].id)
+        .single();
+      expect(pinnedPlayer!.team_id).toBe(teamAId);
+    }
+    expect(seen.size).toBeGreaterThan(1);
   });
 
   it("keeps pinned players in their original team across repeated reshuffles", async () => {

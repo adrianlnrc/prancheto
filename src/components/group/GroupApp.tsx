@@ -17,15 +17,13 @@ import {
 import { queuedTeams } from "@/lib/game/derive";
 import { EntrarScreen } from "./EntrarScreen";
 import { SemRodadaScreen } from "./SemRodadaScreen";
-import { ChegadaScreen } from "./ChegadaScreen";
-import { SorteioScreen } from "./SorteioScreen";
+import { JogadoresScreen } from "./JogadoresScreen";
 import { FilaScreen } from "./FilaScreen";
-import { TimesScreen } from "./TimesScreen";
 import { PosScreen, type PosResult } from "./PosScreen";
 import { HistoricoScreen } from "./HistoricoScreen";
 import { PlayerActionSheet } from "./PlayerActionSheet";
 
-type Screen = "chegada" | "sorteio" | "fila" | "times" | "pos" | "historico";
+type Screen = "jogadores" | "fila" | "pos" | "historico";
 
 function Shell({ children }: { children: React.ReactNode }) {
   return <div className="relative flex min-h-dvh flex-1 flex-col">{children}</div>;
@@ -34,9 +32,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 export function GroupApp({ slug }: { slug: string }) {
   const data = useGroupRealtime(slug);
   const [myName, setMyName] = useState<string | null | undefined>(undefined);
-  const [screen, setScreen] = useState<Screen>("chegada");
-  const [sorteando, setSorteando] = useState(false);
-  const [lastDraw, setLastDraw] = useState<{ a: string; b: string } | null>(null);
+  const [screen, setScreen] = useState<Screen>("jogadores");
   const [posResult, setPosResult] = useState<PosResult | null>(null);
   const [sheetPlayerId, setSheetPlayerId] = useState<string | null>(null);
 
@@ -123,32 +119,7 @@ export function GroupApp({ slug }: { slug: string }) {
   if (screen === "historico") {
     return (
       <Shell>
-        <HistoricoScreen pastRounds={data.pastRounds} onFechar={() => setScreen("chegada")} />
-      </Shell>
-    );
-  }
-
-  if (screen === "sorteio" && lastDraw) {
-    return (
-      <Shell>
-        <SorteioScreen
-          teamA={data.teams.find((t) => t.id === lastDraw.a)}
-          teamB={data.teams.find((t) => t.id === lastDraw.b)}
-          players={data.players}
-          sorteando={sorteando}
-          onVoltar={() => {
-            setLastDraw(null);
-            setScreen("chegada");
-          }}
-          onSortearNovo={async () => {
-            setSorteando(true);
-            try {
-              await reshuffleDraw(round.id, lastDraw.a, lastDraw.b);
-            } finally {
-              setSorteando(false);
-            }
-          }}
-        />
+        <HistoricoScreen pastRounds={data.pastRounds} onFechar={() => setScreen("jogadores")} />
       </Shell>
     );
   }
@@ -160,24 +131,9 @@ export function GroupApp({ slug }: { slug: string }) {
           result={posResult}
           onVoltar={() => {
             setPosResult(null);
-            setScreen("chegada");
+            setScreen("jogadores");
           }}
         />
-      </Shell>
-    );
-  }
-
-  if (screen === "times") {
-    return (
-      <Shell>
-        <TimesScreen
-          round={round}
-          teams={data.teams}
-          players={data.players}
-          onGoFila={() => setScreen("fila")}
-          onOpenSheet={setSheetPlayerId}
-        />
-        {sheet}
       </Shell>
     );
   }
@@ -189,8 +145,8 @@ export function GroupApp({ slug }: { slug: string }) {
           round={round}
           teams={data.teams}
           players={data.players}
-          onGoTimes={() => setScreen("times")}
-          onGoChegada={() => setScreen("chegada")}
+          onGoTimes={() => setScreen("jogadores")}
+          onGoChegada={() => setScreen("jogadores")}
           onVenceu={async (winner) => {
             const home = data.teams.find((t) => t.id === round.current_home_team_id);
             const away = data.teams.find((t) => t.id === round.current_away_team_id);
@@ -229,28 +185,16 @@ export function GroupApp({ slug }: { slug: string }) {
 
   return (
     <Shell>
-      <ChegadaScreen
+      <JogadoresScreen
         group={data.group}
         round={round}
         players={data.players}
-        onGoTimes={() => setScreen("times")}
+        teams={data.teams}
         onGoFila={() => setScreen("fila")}
         onAddPlayer={(name) => addPlayer(round.id, name)}
         onOpenSheet={setSheetPlayerId}
-        sorteando={sorteando}
-        onSortear={async () => {
-          setSorteando(true);
-          try {
-            const result = await confirmDraw(round.id);
-            const row = Array.isArray(result) ? result[0] : result;
-            if (row) {
-              setLastDraw({ a: row.team_a_id, b: row.team_b_id });
-              setScreen("sorteio");
-            }
-          } finally {
-            setSorteando(false);
-          }
-        }}
+        onSortear={() => confirmDraw(round.id)}
+        onSortearNovo={(teamAId, teamBId) => reshuffleDraw(round.id, teamAId, teamBId)}
       />
       {sheet}
     </Shell>
