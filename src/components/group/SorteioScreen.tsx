@@ -8,11 +8,15 @@ export function SorteioScreen({
   teamB,
   players,
   onVoltar,
+  onSortearNovo,
+  sorteando,
 }: {
   teamA: Team | undefined;
   teamB: Team | undefined;
   players: Player[];
   onVoltar: () => void;
+  onSortearNovo: () => void;
+  sorteando: boolean;
 }) {
   const rosterOf = (team: Team | undefined) =>
     team ? players.filter((p) => p.team_id === team.id) : [];
@@ -43,9 +47,12 @@ export function SorteioScreen({
           ))}
         </div>
       </div>
-      <div className="border-t border-ink-200 p-5">
+      <div className="flex flex-col gap-2.5 border-t border-ink-200 p-5">
         <Button fullWidth onClick={onVoltar}>
           Beleza, voltar pra fila
+        </Button>
+        <Button variant="ghost" fullWidth disabled={sorteando} onClick={onSortearNovo}>
+          {sorteando ? "Sorteando..." : "Sortear de novo"}
         </Button>
       </div>
     </div>

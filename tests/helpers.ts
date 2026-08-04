@@ -48,3 +48,13 @@ export async function addTestPlayers(roundId: string, names: string[]) {
 export async function cleanupTestGroup(groupId: string) {
   await supabase.from("groups").delete().eq("id", groupId);
 }
+
+export async function rosterSizes(roundId: string, teamAId: string, teamBId: string) {
+  const { data: players } = await supabase
+    .from("players")
+    .select("team_id")
+    .eq("round_id", roundId);
+  const a = players!.filter((p) => p.team_id === teamAId).length;
+  const b = players!.filter((p) => p.team_id === teamBId).length;
+  return { a, b };
+}

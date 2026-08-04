@@ -70,6 +70,16 @@ export async function confirmDraw(roundId: string) {
   return data;
 }
 
+export async function reshuffleDraw(roundId: string, teamAId: string, teamBId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("reshuffle_draw", {
+    p_round_id: roundId,
+    p_team_a_id: teamAId,
+    p_team_b_id: teamBId,
+  });
+  if (error) throw error;
+}
+
 export async function recordMatchResult(roundId: string, winner: "home" | "away" | "draw") {
   const supabase = createClient();
   const { error } = await supabase.rpc("record_match_result", {
