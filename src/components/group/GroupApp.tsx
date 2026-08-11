@@ -7,6 +7,7 @@ import {
   addPlayer,
   confirmDraw,
   markInjured,
+  movePlayer,
   recordMatchResult,
   removePlayer,
   renamePlayer,
@@ -95,6 +96,9 @@ export function GroupApp({ slug }: { slug: string }) {
   const sheet = (
     <PlayerActionSheet
       player={sheetPlayer}
+      teams={data.teams}
+      players={data.players}
+      teamSize={round.team_size}
       onClose={() => setSheetPlayerId(null)}
       onRename={async (name) => {
         if (sheetPlayer) await renamePlayer(sheetPlayer.id, name);
@@ -106,6 +110,10 @@ export function GroupApp({ slug }: { slug: string }) {
       }}
       onRemover={async () => {
         if (sheetPlayer) await removePlayer(sheetPlayer.id);
+        setSheetPlayerId(null);
+      }}
+      onMove={async (targetTeamId, swapOutPlayerId) => {
+        if (sheetPlayer) await movePlayer(sheetPlayer.id, targetTeamId, swapOutPlayerId);
         setSheetPlayerId(null);
       }}
     />

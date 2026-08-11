@@ -80,6 +80,16 @@ export async function recordMatchResult(roundId: string, winner: "home" | "away"
   if (error) throw error;
 }
 
+export async function movePlayer(playerId: string, targetTeamId: string, swapOutPlayerId?: string) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("move_player", {
+    p_player_id: playerId,
+    p_target_team_id: targetTeamId,
+    p_swap_out_player_id: swapOutPlayerId ?? null,
+  });
+  if (error) throw error;
+}
+
 export async function markInjured(playerId: string) {
   const supabase = createClient();
   const { error } = await supabase.rpc("mark_injured", { p_player_id: playerId });

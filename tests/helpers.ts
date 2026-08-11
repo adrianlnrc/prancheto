@@ -46,9 +46,13 @@ export async function addTestPlayers(roundId: string, names: string[]) {
 }
 
 // Inserts a player directly (bypassing add_player's auto-allocation, see #16)
-// so tests can construct a genuinely unassigned "waiting" player even after
-// a round's teams already exist.
-export async function insertWaitingPlayer(roundId: string, name: string) {
+// so tests can construct exact team/roster states — an unassigned "waiting"
+// player, or one planted straight onto a given team.
+export async function insertPlayerDirect(
+  roundId: string,
+  name: string,
+  teamId: string | null = null,
+) {
   const { data: maxOrder } = await supabase
     .from("players")
     .select("arrival_order")
@@ -61,12 +65,27 @@ export async function insertWaitingPlayer(roundId: string, name: string) {
     .insert({
       round_id: roundId,
       name,
+      team_id: teamId,
       arrival_order: (maxOrder?.arrival_order ?? 0) + 1,
     })
     .select("*")
     .single();
   if (error) throw error;
   return data as { id: string; name: string; team_id: string | null };
+}
+
+export async function insertWaitingPlayer(roundId: string, name: string) {
+  return insertPlayerDirect(roundId, name, null);
+}
+
+export async function insertTestTeam(roundId: string, label: string, status: string) {
+  const { data, error } = await supabase
+    .from("teams")
+    .insert({ round_id: roundId, label, status })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as { id: string; label: string; status: string };
 }
 
 export async function cleanupTestGroup(groupId: string) {
