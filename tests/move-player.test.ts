@@ -131,6 +131,32 @@ describe("move_player", () => {
     expect(error).not.toBeNull();
   });
 
+  it("refuses to move a player into a team that is done", async () => {
+    const round = await newRound();
+    const teamX = await insertTestTeam(round.id, "X", "forming");
+    const teamY = await insertTestTeam(round.id, "Y", "done");
+    const p1 = await insertPlayerDirect(round.id, "P1", teamX.id);
+
+    const { error } = await supabase.rpc("move_player", {
+      p_player_id: p1.id,
+      p_target_team_id: teamY.id,
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it("refuses to move a player out of a team that is done", async () => {
+    const round = await newRound();
+    const teamX = await insertTestTeam(round.id, "X", "done");
+    const teamY = await insertTestTeam(round.id, "Y", "forming");
+    const p1 = await insertPlayerDirect(round.id, "P1", teamX.id);
+
+    const { error } = await supabase.rpc("move_player", {
+      p_player_id: p1.id,
+      p_target_team_id: teamY.id,
+    });
+    expect(error).not.toBeNull();
+  });
+
   it("moving a waiting player into a full team sends the swapped-out player to the waiting pool", async () => {
     const round = await newRound();
     const teamY = await insertTestTeam(round.id, "Y", "forming");

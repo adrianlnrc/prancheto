@@ -41,7 +41,9 @@ export function PlayerActionSheet({
   const canMove = !isPlayingNow;
 
   const rosterOf = (teamId: string) => players.filter((p) => p.team_id === teamId);
-  const eligibleTeams = teams.filter((t) => t.status !== "playing" && t.id !== player.team_id);
+  const eligibleTeams = teams.filter(
+    (t) => t.status !== "playing" && t.status !== "done" && t.id !== player.team_id,
+  );
 
   function close() {
     setStep("root");
