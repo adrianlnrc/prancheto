@@ -1,6 +1,6 @@
 import { customAlphabet } from "nanoid";
 import { createClient } from "@/lib/supabase/client";
-import type { Group } from "@/lib/types";
+import type { Group, Team } from "@/lib/types";
 
 const slugSuffix = customAlphabet("abcdefghijkmnopqrstuvwxyz23456789", 5);
 
@@ -91,6 +91,13 @@ export async function recordMatchResult(
   });
   if (error) throw error;
   return data[0] as MatchOutcome;
+}
+
+export async function createTeam(roundId: string): Promise<Team> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("create_team", { p_round_id: roundId });
+  if (error) throw error;
+  return data as Team;
 }
 
 export async function movePlayer(playerId: string, targetTeamId: string, swapOutPlayerId?: string) {
