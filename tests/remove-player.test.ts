@@ -3,6 +3,7 @@ import {
   addTestPlayers,
   cleanupTestGroup,
   createTestGroup,
+  insertWaitingPlayer,
   startTestRound,
   testClient,
 } from "./helpers";
@@ -39,7 +40,7 @@ describe("remove_player", () => {
     const { data: draw } = await supabase.rpc("confirm_draw", { p_round_id: round.id });
     const [{ team_a_id }] = draw!;
 
-    const waiting = await addTestPlayers(round.id, ["Waiting One"]);
+    const waiting = await insertWaitingPlayer(round.id, "Waiting One");
 
     const { data: teamAPlayers } = await supabase
       .from("players")
@@ -52,7 +53,7 @@ describe("remove_player", () => {
     expect(error).toBeNull();
 
     expect(await playerExists(targetId)).toBe(false);
-    expect(await teamIdOf(waiting[0].id)).toBe(team_a_id);
+    expect(await teamIdOf(waiting.id)).toBe(team_a_id);
   });
 
   it("leaves the team short when nobody is waiting to replace", async () => {
@@ -92,8 +93,9 @@ describe("remove_player", () => {
     const { data: draw } = await supabase.rpc("confirm_draw", { p_round_id: round.id });
     const [{ team_a_id }] = draw!;
 
-    const extras = await addTestPlayers(round.id, ["Injured Extra", "Healthy Extra"]);
-    await supabase.rpc("mark_injured", { p_player_id: extras[0].id });
+    const injuredExtra = await insertWaitingPlayer(round.id, "Injured Extra");
+    const healthyExtra = await insertWaitingPlayer(round.id, "Healthy Extra");
+    await supabase.rpc("mark_injured", { p_player_id: injuredExtra.id });
 
     const { data: teamAPlayers } = await supabase
       .from("players")
@@ -104,6 +106,6 @@ describe("remove_player", () => {
 
     const { error } = await supabase.rpc("remove_player", { p_player_id: targetId });
     expect(error).toBeNull();
-    expect(await teamIdOf(extras[1].id)).toBe(team_a_id);
+    expect(await teamIdOf(healthyExtra.id)).toBe(team_a_id);
   });
 });
