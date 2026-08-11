@@ -227,6 +227,7 @@ export function GroupApp({ slug }: { slug: string }) {
         onOpenSheet={setSheetPlayerId}
         onSortear={() => confirmDraw(round.id)}
         onSortearNovo={(teamAId, teamBId) => reshuffleDraw(round.id, teamAId, teamBId)}
+        onMovePlayer={(playerId, targetTeamId) => movePlayer(playerId, targetTeamId)}
       />
       {sheet}
     </Shell>
