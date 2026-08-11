@@ -78,11 +78,14 @@ describe("record_match_result — case 2 (fatigue substitution)", () => {
     await supabase.from("teams").update({ queue_position: 1 }).eq("id", nextTeam.id);
     const sub = await insertPlayerDirect(round.id, "Sub", nextTeam.id);
 
-    const { error } = await supabase.rpc("record_match_result", {
+    const { data, error } = await supabase.rpc("record_match_result", {
       p_round_id: round.id,
       p_winner: "home",
     });
     expect(error).toBeNull();
+    expect(data![0].outcome).toBe("case2");
+    expect(data![0].subs_in).toEqual(["Sub"]);
+    expect(data![0].subs_out).toHaveLength(1);
 
     // Loser keeps playing, unchanged in the round.
     const state = await roundState(round.id);

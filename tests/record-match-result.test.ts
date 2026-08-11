@@ -68,11 +68,12 @@ describe("record_match_result", () => {
   it("keeps the same two teams playing when the queue is empty", async () => {
     const { round, homeId, awayId } = await setupPlayingRound();
 
-    const { error } = await supabase.rpc("record_match_result", {
+    const { data, error } = await supabase.rpc("record_match_result", {
       p_round_id: round.id,
       p_winner: "home",
     });
     expect(error).toBeNull();
+    expect(data![0].outcome).toBe("no_change");
 
     const state = await roundState(round.id);
     expect(state.current_home_team_id).toBe(homeId);
@@ -90,11 +91,14 @@ describe("record_match_result", () => {
       await insertPlayerDirect(round.id, `Q${i + 1}`, nextTeam.id);
     }
 
-    const { error } = await supabase.rpc("record_match_result", {
+    const { data, error } = await supabase.rpc("record_match_result", {
       p_round_id: round.id,
       p_winner: "home",
     });
     expect(error).toBeNull();
+    expect(data![0].outcome).toBe("full_swap");
+    expect(data![0].loser_label).toBe("B");
+    expect(data![0].entering_label).toBe("C");
 
     const state = await roundState(round.id);
     expect(state.current_home_team_id).toBe(homeId);
@@ -119,11 +123,14 @@ describe("record_match_result", () => {
       incompleteRoster.push(p.id);
     }
 
-    const { error } = await supabase.rpc("record_match_result", {
+    const { data, error } = await supabase.rpc("record_match_result", {
       p_round_id: round.id,
       p_winner: "home",
     });
     expect(error).toBeNull();
+    expect(data![0].outcome).toBe("case1");
+    expect(data![0].entering_label).toBe("C");
+    expect(data![0].loser_label).toBe("B");
 
     const nextRoster = await rosterIds(nextTeam.id);
     expect(nextRoster).toHaveLength(TEAM_SIZE);

@@ -13,8 +13,8 @@ import {
   renamePlayer,
   reshuffleDraw,
   startRound,
+  type MatchOutcome,
 } from "@/lib/game/actions";
-import { queuedTeams } from "@/lib/game/derive";
 import { EntrarScreen } from "./EntrarScreen";
 import { SemRodadaScreen } from "./SemRodadaScreen";
 import { JogadoresScreen } from "./JogadoresScreen";
@@ -27,6 +27,50 @@ type Screen = "jogadores" | "fila" | "pos" | "historico";
 
 function Shell({ children }: { children: React.ReactNode }) {
   return <div className="relative flex min-h-dvh flex-1 flex-col">{children}</div>;
+}
+
+/** Builds the post-match summary from what record_match_result actually did
+ * — never guessed ahead of time, since the loser doesn't always fully leave
+ * (case 1) and sometimes doesn't leave at all (case 2). */
+function posResultFromOutcome(result: MatchOutcome): PosResult {
+  const winner = `Time ${result.winner_label}`;
+  const title = `${winner} ficou.`;
+
+  switch (result.outcome) {
+    case "no_change":
+      return {
+        title,
+        subtitle: "Ninguém disponível pra substituir agora — os times continuam os mesmos.",
+        saiLabel: "ninguém",
+        entraLabel: "ninguém",
+        depoisLabel: "—",
+      };
+    case "case1":
+      return {
+        title,
+        subtitle: `Time ${result.entering_label} entra incompleto, completado por quem perdeu.`,
+        saiLabel: `Time ${result.loser_label}`,
+        entraLabel: `Time ${result.entering_label}`,
+        depoisLabel: "—",
+      };
+    case "case2":
+      return {
+        title,
+        subtitle: `Time ${result.loser_label} continua — só troca quem tava jogando sem parar.`,
+        saiLabel: result.subs_out.join(", "),
+        entraLabel: result.subs_in.join(", "),
+        depoisLabel: "—",
+      };
+    case "full_swap":
+    default:
+      return {
+        title,
+        subtitle: "Perdeu sai. Entra o próximo da fila.",
+        saiLabel: `Time ${result.loser_label}`,
+        entraLabel: `Time ${result.entering_label}`,
+        depoisLabel: "—",
+      };
+  }
 }
 
 export function GroupApp({ slug }: { slug: string }) {
@@ -151,20 +195,9 @@ export function GroupApp({ slug }: { slug: string }) {
           onGoTimes={() => setScreen("jogadores")}
           onGoChegada={() => setScreen("jogadores")}
           onVenceu={async (winner) => {
-            const home = data.teams.find((t) => t.id === round.current_home_team_id);
-            const away = data.teams.find((t) => t.id === round.current_away_team_id);
-            const queue = queuedTeams(data.teams);
-            const winnerTeam = winner === "home" ? home : away;
-            const loserTeam = winner === "home" ? away : home;
-            setPosResult({
-              title: `Time ${winnerTeam?.label ?? "?"} ficou.`,
-              subtitle: "Perdeu sai. Entra o próximo da fila.",
-              saiLabel: `Time ${loserTeam?.label ?? "?"}`,
-              entraLabel: queue[0] ? `Time ${queue[0].label}` : "ninguém ainda",
-              depoisLabel: queue[1] ? `Time ${queue[1].label}` : "—",
-            });
+            const result = await recordMatchResult(round.id, winner);
+            setPosResult(posResultFromOutcome(result));
             setScreen("pos");
-            await recordMatchResult(round.id, winner);
           }}
         />
         {sheet}

@@ -71,13 +71,26 @@ export async function reshuffleDraw(roundId: string, teamAId: string, teamBId: s
   if (error) throw error;
 }
 
-export async function recordMatchResult(roundId: string, winner: "home" | "away") {
+export type MatchOutcome = {
+  outcome: "no_change" | "full_swap" | "case1" | "case2";
+  winner_label: string;
+  loser_label: string;
+  entering_label: string | null;
+  subs_in: string[];
+  subs_out: string[];
+};
+
+export async function recordMatchResult(
+  roundId: string,
+  winner: "home" | "away",
+): Promise<MatchOutcome> {
   const supabase = createClient();
-  const { error } = await supabase.rpc("record_match_result", {
+  const { data, error } = await supabase.rpc("record_match_result", {
     p_round_id: roundId,
     p_winner: winner,
   });
   if (error) throw error;
+  return data[0] as MatchOutcome;
 }
 
 export async function movePlayer(playerId: string, targetTeamId: string, swapOutPlayerId?: string) {
