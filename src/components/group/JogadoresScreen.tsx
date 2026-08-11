@@ -1,6 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import { Button } from "@/components/ui/Button";
 import { PressableRow } from "./PressableRow";
 import type { Group, Player, Round, Team } from "@/lib/types";
@@ -20,6 +31,7 @@ export function JogadoresScreen({
   onOpenSheet,
   onSortear,
   onSortearNovo,
+  onMovePlayer,
 }: {
   group: Group;
   round: Round;
@@ -30,6 +42,7 @@ export function JogadoresScreen({
   onOpenSheet: (playerId: string) => void;
   onSortear: () => Promise<DrawResult[] | DrawResult | null>;
   onSortearNovo: (teamAId: string, teamBId: string) => Promise<void>;
+  onMovePlayer: (playerId: string, targetTeamId: string) => void;
 }) {
   const [view, setView] = useState<View>("lista");
   const [novoNome, setNovoNome] = useState("");
@@ -164,7 +177,13 @@ export function JogadoresScreen({
               onOpenSheet={onOpenSheet}
             />
           ) : (
-            <DivididoPorTimes round={round} teams={teams} players={players} onOpenSheet={onOpenSheet} />
+            <DivididoPorTimes
+              round={round}
+              teams={teams}
+              players={players}
+              onOpenSheet={onOpenSheet}
+              onMovePlayer={onMovePlayer}
+            />
           )}
         </>
       )}
@@ -278,16 +297,24 @@ function DivididoPorTimes({
   teams,
   players,
   onOpenSheet,
+  onMovePlayer,
 }: {
   round: Round;
   teams: Team[];
   players: Player[];
   onOpenSheet: (playerId: string) => void;
+  onMovePlayer: (playerId: string, targetTeamId: string) => void;
 }) {
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
+
   const ordered = [...teams]
     .filter((t) => t.status !== "done")
     .sort((a, b) => a.label.localeCompare(b.label));
   const waiting = waitingPlayers(players);
+  const draggingPlayer = draggingId ? (players.find((p) => p.id === draggingId) ?? null) : null;
 
   function statusOf(t: Team) {
     if (t.id === round.current_home_team_id || t.id === round.current_away_team_id) {
@@ -297,58 +324,125 @@ function DivididoPorTimes({
     return "montando";
   }
 
-  return (
-    <div className="flex flex-1 flex-col gap-4 overflow-auto p-5">
-      {ordered.map((t) => {
-        const roster = players.filter((p) => p.team_id === t.id);
-        const playing =
-          t.id === round.current_home_team_id || t.id === round.current_away_team_id;
-        return (
-          <div key={t.id} className="border border-ink-200">
-            <div
-              className={[
-                "flex items-center justify-between gap-2 px-3.5 py-3",
-                playing ? "bg-yellow-500" : "bg-paper-2",
-              ].join(" ")}
-            >
-              <div className="font-display text-[22px] font-black tracking-[-0.02em]">
-                Time {t.label}
-              </div>
-              <div
-                className={[
-                  "font-display text-[10px] font-bold uppercase tracking-[0.16em]",
-                  playing ? "text-ink-900" : "text-ink-500",
-                ].join(" ")}
-              >
-                {statusOf(t)}
-              </div>
-            </div>
-            <div className="grid grid-cols-2">
-              {roster.map((p, i) => (
-                <TeamRow key={p.id} player={p} n={i + 1} onOpenSheet={onOpenSheet} />
-              ))}
-            </div>
-            <div className="border-t border-ink-200 px-3.5 py-2 font-body text-xs text-ink-500">
-              {roster.length} de {round.team_size}
-              {roster.length >= round.team_size
-                ? " — completo"
-                : roster.length >= 3
-                  ? ` — falta ${round.team_size - roster.length}, completa com quem perder`
-                  : roster.length > 0
-                    ? ` — falta ${round.team_size - roster.length}, entra por substituição no time que perder`
-                    : " — falta gente"}
-            </div>
-          </div>
-        );
-      })}
+  function handleDragStart(e: DragStartEvent) {
+    setDraggingId(String(e.active.id));
+  }
 
-      <div>
-        <div className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-yellow-700">
-          De fora ({waiting.length})
+  function handleDragEnd(e: DragEndEvent) {
+    setDraggingId(null);
+    if (e.over) onMovePlayer(String(e.active.id), String(e.over.id));
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setDraggingId(null)}
+    >
+      <div className="flex flex-1 flex-col gap-4 overflow-auto p-5">
+        {ordered.map((t) => {
+          const roster = players.filter((p) => p.team_id === t.id);
+          const playing =
+            t.id === round.current_home_team_id || t.id === round.current_away_team_id;
+          const full = roster.length >= round.team_size;
+          return (
+            <TeamCard
+              key={t.id}
+              team={t}
+              roster={roster}
+              round={round}
+              playing={playing}
+              full={full}
+              statusLabel={statusOf(t)}
+              onOpenSheet={onOpenSheet}
+            />
+          );
+        })}
+
+        <div>
+          <div className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-yellow-700">
+            De fora ({waiting.length})
+          </div>
+          {waiting.map((p, i) => (
+            <WaitingRow key={p.id} player={p} n={i + 1} onOpenSheet={onOpenSheet} />
+          ))}
         </div>
-        {waiting.map((p, i) => (
-          <WaitingRow key={p.id} player={p} n={i + 1} onOpenSheet={onOpenSheet} />
+      </div>
+
+      <DragOverlay>
+        {draggingPlayer && (
+          <div className="border-2 border-ink-900 bg-paper px-3 py-2 font-display text-base font-bold shadow-[var(--shadow-raised)]">
+            {draggingPlayer.name}
+          </div>
+        )}
+      </DragOverlay>
+    </DndContext>
+  );
+}
+
+function TeamCard({
+  team: t,
+  roster,
+  round,
+  playing,
+  full,
+  statusLabel,
+  onOpenSheet,
+}: {
+  team: Team;
+  roster: Player[];
+  round: Round;
+  playing: boolean;
+  full: boolean;
+  statusLabel: string;
+  onOpenSheet: (playerId: string) => void;
+}) {
+  // Full teams stay non-droppable until #25 adds the "quem sai" swap step —
+  // dropping there today would just fail the RPC with no way to resolve it.
+  const droppable = !playing && !full;
+  const { setNodeRef, isOver } = useDroppable({ id: t.id, disabled: !droppable });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={[
+        "border",
+        droppable && isOver ? "border-2 border-yellow-500 bg-yellow-100" : "border-ink-200",
+      ].join(" ")}
+    >
+      <div
+        className={[
+          "flex items-center justify-between gap-2 px-3.5 py-3",
+          playing ? "bg-yellow-500" : "bg-paper-2",
+        ].join(" ")}
+      >
+        <div className="font-display text-[22px] font-black tracking-[-0.02em]">
+          Time {t.label}
+        </div>
+        <div
+          className={[
+            "font-display text-[10px] font-bold uppercase tracking-[0.16em]",
+            playing ? "text-ink-900" : "text-ink-500",
+          ].join(" ")}
+        >
+          {statusLabel}
+        </div>
+      </div>
+      <div className="grid grid-cols-2">
+        {roster.map((p, i) => (
+          <TeamRow key={p.id} player={p} n={i + 1} onOpenSheet={onOpenSheet} draggable={!playing} />
         ))}
+      </div>
+      <div className="border-t border-ink-200 px-3.5 py-2 font-body text-xs text-ink-500">
+        {roster.length} de {round.team_size}
+        {roster.length >= round.team_size
+          ? " — completo"
+          : roster.length >= 3
+            ? ` — falta ${round.team_size - roster.length}, completa com quem perder`
+            : roster.length > 0
+              ? ` — falta ${round.team_size - roster.length}, entra por substituição no time que perder`
+              : " — falta gente"}
       </div>
     </div>
   );
@@ -358,15 +452,26 @@ function TeamRow({
   player: p,
   n,
   onOpenSheet,
+  draggable,
 }: {
   player: Player;
   n: number;
   onOpenSheet: (playerId: string) => void;
+  draggable: boolean;
 }) {
+  const { setNodeRef, attributes, listeners, isDragging } = useDraggable({
+    id: p.id,
+    disabled: !draggable,
+  });
+
   return (
     <PressableRow
       onLongPress={() => onOpenSheet(p.id)}
-      className="flex items-baseline gap-2 border-t border-ink-200 px-3.5 py-2.5"
+      className={[
+        "flex items-baseline gap-2 border-t border-ink-200 px-3.5 py-2.5",
+        isDragging ? "opacity-30" : "",
+      ].join(" ")}
+      dragHandleProps={draggable ? { setNodeRef, attributes, listeners } : undefined}
     >
       <span className="font-mono-app text-[11px] font-bold text-ink-400">
         {String(n).padStart(2, "0")}
@@ -385,10 +490,16 @@ function WaitingRow({
   n: number;
   onOpenSheet: (playerId: string) => void;
 }) {
+  const { setNodeRef, attributes, listeners, isDragging } = useDraggable({ id: p.id });
+
   return (
     <PressableRow
       onLongPress={() => onOpenSheet(p.id)}
-      className="flex items-baseline gap-2.5 border-b border-ink-200 py-2.5"
+      className={[
+        "flex items-baseline gap-2.5 border-b border-ink-200 py-2.5",
+        isDragging ? "opacity-30" : "",
+      ].join(" ")}
+      dragHandleProps={{ setNodeRef, attributes, listeners }}
     >
       <span className="font-mono-app text-xs font-bold text-ink-400">
         {String(n).padStart(2, "0")}
