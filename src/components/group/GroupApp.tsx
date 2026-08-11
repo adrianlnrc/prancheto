@@ -6,6 +6,7 @@ import { getSavedName, saveName } from "@/lib/localName";
 import {
   addPlayer,
   confirmDraw,
+  createTeam,
   markInjured,
   movePlayer,
   recordMatchResult,
@@ -227,7 +228,13 @@ export function GroupApp({ slug }: { slug: string }) {
         onOpenSheet={setSheetPlayerId}
         onSortear={() => confirmDraw(round.id)}
         onSortearNovo={(teamAId, teamBId) => reshuffleDraw(round.id, teamAId, teamBId)}
-        onMovePlayer={(playerId, targetTeamId) => movePlayer(playerId, targetTeamId)}
+        onMovePlayer={(playerId, targetTeamId, swapOutPlayerId) =>
+          movePlayer(playerId, targetTeamId, swapOutPlayerId)
+        }
+        onCreateTeam={async (playerId) => {
+          const team = await createTeam(round.id);
+          await movePlayer(playerId, team.id);
+        }}
       />
       {sheet}
     </Shell>

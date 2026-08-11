@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
+import { SwapPicker } from "./SwapPicker";
 import type { Player, Team } from "@/lib/types";
 
 type Step = "root" | "pick-team" | "pick-swap";
@@ -108,33 +109,15 @@ export function PlayerActionSheet({
   }
 
   if (step === "pick-swap" && swapTargetTeam) {
-    const roster = rosterOf(swapTargetTeam.id);
     return (
-      <BottomSheet open onClose={close}>
-        <div className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-ink-500">
-          Time {swapTargetTeam.label} tá completo
-        </div>
-        <div className="h-2" />
-        <div className="font-display text-xl font-black tracking-[-0.02em]">
-          Quem sai no lugar de {player.name}?
-        </div>
-        <div className="h-3" />
-        <div className="flex flex-col">
-          {roster.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => handlePickSwap(p)}
-              className="border-t border-ink-200 py-4 text-left font-display text-lg font-bold last:border-b"
-            >
-              {p.name}
-            </button>
-          ))}
-        </div>
-        <div className="h-3" />
-        <Button variant="ghost" fullWidth onClick={() => setStep("pick-team")}>
-          Voltar
-        </Button>
-      </BottomSheet>
+      <SwapPicker
+        playerName={player.name}
+        team={swapTargetTeam}
+        roster={rosterOf(swapTargetTeam.id)}
+        onPick={handlePickSwap}
+        onClose={close}
+        onBack={() => setStep("pick-team")}
+      />
     );
   }
 

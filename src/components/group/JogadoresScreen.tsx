@@ -14,8 +14,11 @@ import {
 } from "@dnd-kit/core";
 import { Button } from "@/components/ui/Button";
 import { PressableRow } from "./PressableRow";
+import { SwapPicker } from "./SwapPicker";
 import type { Group, Player, Round, Team } from "@/lib/types";
 import { canDraw, missingForNextDraw, waitingPlayers } from "@/lib/game/derive";
+
+const NEW_TEAM_DROP_ID = "__new_team__";
 
 type View = "lista" | "times";
 type Draw = { a: string; b: string };
@@ -32,6 +35,7 @@ export function JogadoresScreen({
   onSortear,
   onSortearNovo,
   onMovePlayer,
+  onCreateTeam,
 }: {
   group: Group;
   round: Round;
@@ -42,7 +46,8 @@ export function JogadoresScreen({
   onOpenSheet: (playerId: string) => void;
   onSortear: () => Promise<DrawResult[] | DrawResult | null>;
   onSortearNovo: (teamAId: string, teamBId: string) => Promise<void>;
-  onMovePlayer: (playerId: string, targetTeamId: string) => void;
+  onMovePlayer: (playerId: string, targetTeamId: string, swapOutPlayerId?: string) => void;
+  onCreateTeam: (playerId: string) => void;
 }) {
   const [view, setView] = useState<View>("lista");
   const [novoNome, setNovoNome] = useState("");
@@ -183,6 +188,7 @@ export function JogadoresScreen({
               players={players}
               onOpenSheet={onOpenSheet}
               onMovePlayer={onMovePlayer}
+              onCreateTeam={onCreateTeam}
             />
           )}
         </>
@@ -298,14 +304,19 @@ function DivididoPorTimes({
   players,
   onOpenSheet,
   onMovePlayer,
+  onCreateTeam,
 }: {
   round: Round;
   teams: Team[];
   players: Player[];
   onOpenSheet: (playerId: string) => void;
-  onMovePlayer: (playerId: string, targetTeamId: string) => void;
+  onMovePlayer: (playerId: string, targetTeamId: string, swapOutPlayerId?: string) => void;
+  onCreateTeam: (playerId: string) => void;
 }) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [swapPrompt, setSwapPrompt] = useState<{ playerId: string; teamId: string } | null>(
+    null,
+  );
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
@@ -330,8 +341,27 @@ function DivididoPorTimes({
 
   function handleDragEnd(e: DragEndEvent) {
     setDraggingId(null);
-    if (e.over) onMovePlayer(String(e.active.id), String(e.over.id));
+    if (!e.over) return;
+    const playerId = String(e.active.id);
+    const overId = String(e.over.id);
+
+    if (overId === NEW_TEAM_DROP_ID) {
+      onCreateTeam(playerId);
+      return;
+    }
+
+    const targetTeam = teams.find((t) => t.id === overId);
+    if (!targetTeam) return;
+    const roster = players.filter((p) => p.team_id === targetTeam.id);
+    if (roster.length >= round.team_size) {
+      setSwapPrompt({ playerId, teamId: overId });
+    } else {
+      onMovePlayer(playerId, overId);
+    }
   }
+
+  const swapTeam = swapPrompt ? teams.find((t) => t.id === swapPrompt.teamId) : undefined;
+  const swapPlayer = swapPrompt ? players.find((p) => p.id === swapPrompt.playerId) : undefined;
 
   return (
     <DndContext
@@ -345,7 +375,6 @@ function DivididoPorTimes({
           const roster = players.filter((p) => p.team_id === t.id);
           const playing =
             t.id === round.current_home_team_id || t.id === round.current_away_team_id;
-          const full = roster.length >= round.team_size;
           return (
             <TeamCard
               key={t.id}
@@ -353,12 +382,14 @@ function DivididoPorTimes({
               roster={roster}
               round={round}
               playing={playing}
-              full={full}
+              ownTeamOfDragged={!!draggingPlayer && draggingPlayer.team_id === t.id}
               statusLabel={statusOf(t)}
               onOpenSheet={onOpenSheet}
             />
           );
         })}
+
+        <NewTeamDropZone />
 
         <div>
           <div className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-yellow-700">
@@ -377,7 +408,36 @@ function DivididoPorTimes({
           </div>
         )}
       </DragOverlay>
+
+      {swapPrompt && swapTeam && swapPlayer && (
+        <SwapPicker
+          playerName={swapPlayer.name}
+          team={swapTeam}
+          roster={players.filter((p) => p.team_id === swapTeam.id)}
+          onPick={(swapOut) => {
+            onMovePlayer(swapPrompt.playerId, swapTeam.id, swapOut.id);
+            setSwapPrompt(null);
+          }}
+          onClose={() => setSwapPrompt(null)}
+        />
+      )}
     </DndContext>
+  );
+}
+
+function NewTeamDropZone() {
+  const { setNodeRef, isOver } = useDroppable({ id: NEW_TEAM_DROP_ID });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={[
+        "flex items-center justify-center border-2 border-dashed px-3.5 py-4 font-display text-[13px] font-bold uppercase tracking-[0.12em]",
+        isOver ? "border-yellow-500 bg-yellow-100 text-ink-900" : "border-ink-300 text-ink-400",
+      ].join(" ")}
+    >
+      Arrasta aqui pra criar um time novo
+    </div>
   );
 }
 
@@ -386,7 +446,7 @@ function TeamCard({
   roster,
   round,
   playing,
-  full,
+  ownTeamOfDragged,
   statusLabel,
   onOpenSheet,
 }: {
@@ -394,13 +454,15 @@ function TeamCard({
   roster: Player[];
   round: Round;
   playing: boolean;
-  full: boolean;
+  ownTeamOfDragged: boolean;
   statusLabel: string;
   onOpenSheet: (playerId: string) => void;
 }) {
-  // Full teams stay non-droppable until #25 adds the "quem sai" swap step —
-  // dropping there today would just fail the RPC with no way to resolve it.
-  const droppable = !playing && !full;
+  // Playing teams never accept a drop (move_player already refuses that);
+  // a player's own team is excluded too — dropping there would be a no-op.
+  // Full forming/queued teams ARE droppable — landing there opens the
+  // "quem sai" swap step (#25) instead of moving directly.
+  const droppable = !playing && !ownTeamOfDragged;
   const { setNodeRef, isOver } = useDroppable({ id: t.id, disabled: !droppable });
 
   return (
