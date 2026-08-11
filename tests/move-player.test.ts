@@ -175,4 +175,25 @@ describe("move_player", () => {
     expect(await teamIdOf(waiting.id)).toBe(teamY.id);
     expect(await teamIdOf(q1.id)).toBeNull();
   });
+
+  it("clears is_injured when moving a previously-injured waiting player onto a team", async () => {
+    const round = await newRound();
+    const teamX = await insertTestTeam(round.id, "X", "forming");
+    const waiting = await insertWaitingPlayer(round.id, "Was Injured");
+    await supabase.from("players").update({ is_injured: true }).eq("id", waiting.id);
+
+    const { error } = await supabase.rpc("move_player", {
+      p_player_id: waiting.id,
+      p_target_team_id: teamX.id,
+    });
+    expect(error).toBeNull();
+
+    const { data } = await supabase
+      .from("players")
+      .select("team_id, is_injured")
+      .eq("id", waiting.id)
+      .single();
+    expect(data!.team_id).toBe(teamX.id);
+    expect(data!.is_injured).toBe(false);
+  });
 });
