@@ -15,6 +15,8 @@ import {
 import { Button } from "@/components/ui/Button";
 import { PressableRow } from "./PressableRow";
 import { SwapPicker } from "./SwapPicker";
+import { NavIconButton } from "./NavIconButton";
+import ballIcon from "./assets/ball.png";
 import type { Group, Player, Round, Team } from "@/lib/types";
 import { canDraw, missingForNextDraw, waitingPlayers } from "@/lib/game/derive";
 
@@ -121,12 +123,7 @@ export function JogadoresScreen({
               </button>
             </div>
           )}
-          <button
-            onClick={onGoFila}
-            className="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500"
-          >
-            Fila
-          </button>
+          <NavIconButton onClick={onGoFila} label="Jogo" icon={ballIcon} />
         </div>
       </div>
 

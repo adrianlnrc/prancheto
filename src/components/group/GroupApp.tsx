@@ -204,7 +204,6 @@ export function GroupApp({ slug }: { slug: string }) {
           teams={data.teams}
           players={data.players}
           onGoTimes={() => setScreen("jogadores")}
-          onGoChegada={() => setScreen("jogadores")}
           onVenceu={async (winner) => {
             const result = await recordMatchResult(round.id, winner);
             setPosResult(posResultFromOutcome(result));

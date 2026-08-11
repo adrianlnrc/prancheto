@@ -1,6 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { BottomSheet } from "@/components/ui/BottomSheet";
+import { NavIconButton } from "./NavIconButton";
+import playerIcon from "./assets/player.png";
 import type { Player, Round, Team } from "@/lib/types";
 import { queuedTeams } from "@/lib/game/derive";
 
@@ -9,14 +13,12 @@ export function FilaScreen({
   teams,
   players,
   onGoTimes,
-  onGoChegada,
   onVenceu,
 }: {
   round: Round;
   teams: Team[];
   players: Player[];
   onGoTimes: () => void;
-  onGoChegada: () => void;
   onVenceu: (winner: "home" | "away") => void;
 }) {
   const home = teams.find((t) => t.id === round.current_home_team_id);
@@ -24,6 +26,7 @@ export function FilaScreen({
   const rosterOf = (team: Team | undefined) =>
     team ? players.filter((p) => p.team_id === team.id) : [];
   const queue = queuedTeams(teams);
+  const [confirming, setConfirming] = useState<"home" | "away" | null>(null);
 
   if (!home || !away) {
     return (
@@ -32,7 +35,7 @@ export function FilaScreen({
           Esperando fechar mais um time pra jogo começar.
         </p>
         <div className="h-4" />
-        <Button variant="ghost" onClick={onGoChegada}>
+        <Button variant="ghost" onClick={onGoTimes}>
           Voltar pra lista
         </Button>
       </div>
@@ -48,15 +51,7 @@ export function FilaScreen({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={onGoTimes}
-            className="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500"
-          >
-            Times
-          </button>
-          <Button size="sm" variant="outline" onClick={onGoChegada}>
-            Lista
-          </Button>
+          <NavIconButton onClick={onGoTimes} label="Jogadores" icon={playerIcon} />
         </div>
       </div>
 
@@ -138,14 +133,39 @@ export function FilaScreen({
         </div>
         <div className="h-3" />
         <div className="flex flex-col gap-2.5">
-          <Button fullWidth onClick={() => onVenceu("home")}>
+          <Button fullWidth onClick={() => setConfirming("home")}>
             Time {home.label} venceu
           </Button>
-          <Button fullWidth onClick={() => onVenceu("away")}>
+          <Button fullWidth onClick={() => setConfirming("away")}>
             Time {away.label} venceu
           </Button>
         </div>
       </div>
+
+      <BottomSheet open={!!confirming} onClose={() => setConfirming(null)}>
+        <div className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-ink-500">
+          Confirma?
+        </div>
+        <div className="h-2" />
+        <div className="font-display text-2xl font-black tracking-[-0.02em]">
+          Time {confirming === "home" ? home.label : away.label} venceu
+        </div>
+        <div className="h-6" />
+        <div className="flex flex-col gap-3">
+          <Button
+            fullWidth
+            onClick={() => {
+              if (confirming) onVenceu(confirming);
+              setConfirming(null);
+            }}
+          >
+            Confirmar
+          </Button>
+          <Button variant="ghost" fullWidth onClick={() => setConfirming(null)}>
+            Cancelar
+          </Button>
+        </div>
+      </BottomSheet>
     </div>
   );
 }
