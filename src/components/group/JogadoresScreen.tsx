@@ -330,9 +330,13 @@ function DivididoPorTimes({
             </div>
             <div className="border-t border-ink-200 px-3.5 py-2 font-body text-xs text-ink-500">
               {roster.length} de {round.team_size}
-              {roster.length < round.team_size
-                ? ` — falta ${round.team_size - roster.length}, completa com quem perder`
-                : " — completo"}
+              {roster.length >= round.team_size
+                ? " — completo"
+                : roster.length >= 3
+                  ? ` — falta ${round.team_size - roster.length}, completa com quem perder`
+                  : roster.length > 0
+                    ? ` — falta ${round.team_size - roster.length}, entra por substituição no time que perder`
+                    : " — falta gente"}
             </div>
           </div>
         );

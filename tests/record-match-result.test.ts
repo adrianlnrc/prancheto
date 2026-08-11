@@ -147,26 +147,7 @@ describe("record_match_result", () => {
     expect(await teamStatus(leftoverTeamId as string)).toBe("forming");
   });
 
-  it("brings in a queued team with fewer than 3 players as-is (interim, pre-#20)", async () => {
-    const { round, awayId } = await setupPlayingRound();
-    const nextTeam = await insertTestTeam(round.id, "C", "queued");
-    await supabase.from("teams").update({ queue_position: 1 }).eq("id", nextTeam.id);
-    const p1 = await insertPlayerDirect(round.id, "Q1", nextTeam.id);
-    const p2 = await insertPlayerDirect(round.id, "Q2", nextTeam.id);
-
-    const { error } = await supabase.rpc("record_match_result", {
-      p_round_id: round.id,
-      p_winner: "home",
-    });
-    expect(error).toBeNull();
-
-    const nextRoster = await rosterIds(nextTeam.id);
-    expect(nextRoster.sort()).toEqual([p1.id, p2.id].sort());
-    expect(await teamStatus(nextTeam.id)).toBe("playing");
-    expect(await teamStatus(awayId)).toBe("queued");
-    expect(await rosterIds(awayId)).toHaveLength(TEAM_SIZE);
-
-    const state = await roundState(round.id);
-    expect(state.current_away_team_id).toBe(nextTeam.id);
-  });
+  // The <3-players case used to be brought in as a whole team (interim
+  // behavior before #20). It's now real substitution-by-fatigue — see
+  // tests/case2-fatigue-substitution.test.ts.
 });
