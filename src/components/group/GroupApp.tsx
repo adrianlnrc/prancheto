@@ -29,6 +29,16 @@ function Shell({ children }: { children: React.ReactNode }) {
   return <div className="relative flex min-h-dvh flex-1 flex-col">{children}</div>;
 }
 
+function Loading() {
+  return (
+    <main className="flex flex-1 flex-col items-center justify-center p-8">
+      <div className="pran-now font-display text-[11px] font-bold uppercase tracking-[0.18em] text-ink-400">
+        Carregando<span className="text-yellow-500">.</span>
+      </div>
+    </main>
+  );
+}
+
 /** Builds the post-match summary from what record_match_result actually did
  * — never guessed ahead of time, since the loser doesn't always fully leave
  * (case 1) and sometimes doesn't leave at all (case 2). */
@@ -87,7 +97,7 @@ export function GroupApp({ slug }: { slug: string }) {
   }, [slug]);
 
   if (myName === undefined || data.loading) {
-    return <Shell><div /></Shell>;
+    return <Shell><Loading /></Shell>;
   }
 
   if (data.error === "group-not-found") {
@@ -103,7 +113,7 @@ export function GroupApp({ slug }: { slug: string }) {
     );
   }
 
-  if (!data.group) return <Shell><div /></Shell>;
+  if (!data.group) return <Shell><Loading /></Shell>;
 
   if (!myName) {
     return (

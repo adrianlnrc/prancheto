@@ -115,7 +115,7 @@ export function JogadoresScreen({
       {revealedDraw ? (
         <div className="flex-1 overflow-auto p-5">
           <div className="font-display text-[30px] font-black leading-[1.08] tracking-[-0.02em]">
-            Fechou a leva<span className="text-yellow-500">.</span>
+            Deu os 2 times<span className="text-yellow-500">.</span>
           </div>
           <div className="h-5" />
           <div className="grid grid-cols-2 gap-5">
@@ -243,7 +243,7 @@ function ArrivalRow({
   onOpenSheet: (playerId: string) => void;
 }) {
   const isWaiting = !p.team_id;
-  const status = p.team_id ? "num time" : "esperando";
+  const status = p.team_id ? "num time" : p.is_injured ? "machucado" : "esperando";
 
   return (
     <PressableRow
@@ -264,7 +264,7 @@ function ArrivalRow({
       <span
         className={[
           "font-display text-[11px] font-bold uppercase tracking-[0.14em]",
-          p.team_id ? "text-ink-500" : "text-ink-300",
+          p.team_id ? "text-ink-500" : p.is_injured ? "text-status-danger" : "text-ink-300",
         ].join(" ")}
       >
         {status}
@@ -394,6 +394,11 @@ function WaitingRow({
         {String(n).padStart(2, "0")}
       </span>
       <span className="flex-1 font-display text-lg font-bold">{p.name}</span>
+      {p.is_injured && (
+        <span className="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-status-danger">
+          machucado
+        </span>
+      )}
     </PressableRow>
   );
 }
