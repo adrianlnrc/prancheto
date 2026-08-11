@@ -11,14 +11,12 @@ export function PlayerActionSheet({
   onRename,
   onLesionado,
   onRemover,
-  onFixar,
 }: {
   player: Player | null;
   onClose: () => void;
   onRename: (name: string) => void;
   onLesionado: () => void;
   onRemover: () => void;
-  onFixar: (slot: "first" | "second" | null) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(player?.name ?? "");
@@ -61,31 +59,6 @@ export function PlayerActionSheet({
           <Button fullWidth onClick={() => setEditing(true)}>
             Editar nome
           </Button>
-        )}
-
-        {isWaiting && (
-          <div className="flex flex-col">
-            <button
-              onClick={() => onFixar("first")}
-              className="w-full border-t border-ink-200 py-4 text-left font-display text-lg font-bold"
-            >
-              Fixar no primeiro time da leva
-            </button>
-            <button
-              onClick={() => onFixar("second")}
-              className="w-full border-t border-b border-ink-200 py-4 text-left font-display text-lg font-bold"
-            >
-              Fixar no segundo time da leva
-            </button>
-            {player.pin_slot && (
-              <button
-                onClick={() => onFixar(null)}
-                className="w-full py-4 text-left font-display text-lg font-bold text-status-danger"
-              >
-                Tirar a fixação
-              </button>
-            )}
-          </div>
         )}
 
         {!isWaiting && (

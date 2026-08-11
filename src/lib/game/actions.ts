@@ -52,15 +52,6 @@ export async function addPlayer(roundId: string, name: string) {
   return data;
 }
 
-export async function setPin(playerId: string, pinSlot: "first" | "second" | null) {
-  const supabase = createClient();
-  const { error } = await supabase.rpc("set_pin", {
-    p_player_id: playerId,
-    p_pin_slot: pinSlot,
-  });
-  if (error) throw error;
-}
-
 export async function confirmDraw(roundId: string) {
   const supabase = createClient();
   const { data, error } = await supabase.rpc("confirm_draw", {

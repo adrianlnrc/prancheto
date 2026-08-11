@@ -36,8 +36,9 @@ export function JogadoresScreen({
   const [sorteando, setSorteando] = useState(false);
   const [revealedDraw, setRevealedDraw] = useState<Draw | null>(null);
 
+  const hasDrawn = !!round.current_home_team_id;
   const faltam = missingForNextDraw(players, round.team_size);
-  const podeSortear = canDraw(players, round.team_size);
+  const podeSortear = !hasDrawn && canDraw(players, round.team_size);
 
   function handleAdd() {
     const name = novoNome.trim();
@@ -139,18 +140,20 @@ export function JogadoresScreen({
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-4 bg-yellow-500 px-5 py-4">
-            <div className="font-display text-[46px] font-black leading-none tracking-[-0.02em]">
-              {faltam}
+          {!hasDrawn && (
+            <div className="flex items-center gap-4 bg-yellow-500 px-5 py-4">
+              <div className="font-display text-[46px] font-black leading-none tracking-[-0.02em]">
+                {faltam}
+              </div>
+              <div className="font-display text-[15px] font-bold uppercase tracking-[0.02em] leading-[1.25]">
+                {faltam === 0
+                  ? "deu 2 times — pode sortear"
+                  : faltam === 1
+                    ? "falta 1 pro sorteio inicial"
+                    : "faltam pro sorteio inicial"}
+              </div>
             </div>
-            <div className="font-display text-[15px] font-bold uppercase tracking-[0.02em] leading-[1.25]">
-              {faltam === 0
-                ? "deu 2 times — pode sortear"
-                : faltam === 1
-                  ? "falta 1 pra fechar a próxima leva"
-                  : "faltam pra fechar a próxima leva"}
-            </div>
-          </div>
+          )}
 
           {view === "lista" ? (
             <ListaCompleta
@@ -166,22 +169,24 @@ export function JogadoresScreen({
         </>
       )}
 
-      <div className="flex flex-col gap-2.5 border-t border-ink-200 p-5">
-        {revealedDraw ? (
-          <>
-            <Button fullWidth onClick={() => setRevealedDraw(null)}>
-              Beleza, continuar
+      {(revealedDraw || !hasDrawn) && (
+        <div className="flex flex-col gap-2.5 border-t border-ink-200 p-5">
+          {revealedDraw ? (
+            <>
+              <Button fullWidth onClick={() => setRevealedDraw(null)}>
+                Beleza, continuar
+              </Button>
+              <Button variant="ghost" fullWidth disabled={sorteando} onClick={handleSortearNovo}>
+                {sorteando ? "Sorteando..." : "Sortear de novo"}
+              </Button>
+            </>
+          ) : (
+            <Button fullWidth disabled={!podeSortear || sorteando} onClick={handleSortear}>
+              {sorteando ? "Sorteando..." : "Sortear os 2 times iniciais"}
             </Button>
-            <Button variant="ghost" fullWidth disabled={sorteando} onClick={handleSortearNovo}>
-              {sorteando ? "Sorteando..." : "Sortear de novo"}
-            </Button>
-          </>
-        ) : (
-          <Button fullWidth disabled={!podeSortear || sorteando} onClick={handleSortear}>
-            {sorteando ? "Sorteando..." : "Sortear os 2 próximos times"}
-          </Button>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -222,7 +227,7 @@ function ListaCompleta({
 
       <div className="h-2" />
       <p className="font-body text-xs text-ink-400">
-        Toque e segure um nome pra editar, fixar craque, marcar machucado ou tirar da lista.
+        Toque e segure um nome pra editar, marcar machucado ou tirar da lista.
       </p>
     </div>
   );
@@ -238,7 +243,7 @@ function ArrivalRow({
   onOpenSheet: (playerId: string) => void;
 }) {
   const isWaiting = !p.team_id;
-  const status = p.team_id ? "num time" : p.pin_slot ? "fixado" : "esperando";
+  const status = p.team_id ? "num time" : "esperando";
 
   return (
     <PressableRow
@@ -259,7 +264,7 @@ function ArrivalRow({
       <span
         className={[
           "font-display text-[11px] font-bold uppercase tracking-[0.14em]",
-          p.team_id ? "text-ink-500" : p.pin_slot ? "text-yellow-700" : "text-ink-300",
+          p.team_id ? "text-ink-500" : "text-ink-300",
         ].join(" ")}
       >
         {status}

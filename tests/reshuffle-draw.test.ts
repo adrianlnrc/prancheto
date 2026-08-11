@@ -18,7 +18,7 @@ afterEach(async () => {
   groupId = undefined;
 });
 
-async function setupDrawnRound(pinSlots: Array<"first" | "second"> = []) {
+async function setupDrawnRound() {
   const group = await createTestGroup();
   groupId = group.id;
   const round = await startTestRound(group.id, TEAM_SIZE);
@@ -26,10 +26,6 @@ async function setupDrawnRound(pinSlots: Array<"first" | "second"> = []) {
     round.id,
     Array.from({ length: TEAM_SIZE * 2 }, (_, i) => `Player ${i + 1}`),
   );
-
-  for (let i = 0; i < pinSlots.length; i++) {
-    await supabase.rpc("set_pin", { p_player_id: players[i].id, p_pin_slot: pinSlots[i] });
-  }
 
   const { data } = await supabase.rpc("confirm_draw", { p_round_id: round.id });
   const [{ team_a_id, team_b_id }] = data!;
@@ -94,57 +90,8 @@ describe("reshuffle_draw", () => {
     expect(seen.size).toBeGreaterThan(1);
   });
 
-  it("actually changes the unpinned rest with a single pinned player", async () => {
-    const { round, players, teamAId, teamBId } = await setupDrawnRound(["first"]);
-
-    const seen = new Set<string>();
-    for (let i = 0; i < 8; i++) {
-      const { error } = await supabase.rpc("reshuffle_draw", {
-        p_round_id: round.id,
-        p_team_a_id: teamAId,
-        p_team_b_id: teamBId,
-      });
-      expect(error).toBeNull();
-      seen.add(await teamAMembers(round.id, teamAId));
-
-      const { data: pinnedPlayer } = await supabase
-        .from("players")
-        .select("team_id")
-        .eq("id", players[0].id)
-        .single();
-      expect(pinnedPlayer!.team_id).toBe(teamAId);
-    }
-    expect(seen.size).toBeGreaterThan(1);
-  });
-
-  it("keeps pinned players in their original team across repeated reshuffles", async () => {
-    const { round, players, teamAId, teamBId } = await setupDrawnRound(["first", "second"]);
-
-    for (let i = 0; i < 3; i++) {
-      const { error } = await supabase.rpc("reshuffle_draw", {
-        p_round_id: round.id,
-        p_team_a_id: teamAId,
-        p_team_b_id: teamBId,
-      });
-      expect(error).toBeNull();
-
-      const { data: pinned } = await supabase
-        .from("players")
-        .select("id, team_id")
-        .in("id", [players[0].id, players[1].id]);
-      const p0 = pinned!.find((p) => p.id === players[0].id);
-      const p1 = pinned!.find((p) => p.id === players[1].id);
-      expect(p0!.team_id).toBe(teamAId);
-      expect(p1!.team_id).toBe(teamBId);
-
-      const { a, b } = await rosterSizes(round.id, teamAId, teamBId);
-      expect(a).toBe(TEAM_SIZE);
-      expect(b).toBe(TEAM_SIZE);
-    }
-  });
-
-  it("stays balanced with a single pinned player across repeated reshuffles", async () => {
-    const { round, teamAId, teamBId } = await setupDrawnRound(["first"]);
+  it("stays balanced across repeated reshuffles", async () => {
+    const { round, teamAId, teamBId } = await setupDrawnRound();
 
     for (let i = 0; i < 3; i++) {
       const { error } = await supabase.rpc("reshuffle_draw", {

@@ -30,15 +30,12 @@ export type Team = {
   created_at: string;
 };
 
-export type PinSlot = "first" | "second";
-
 export type Player = {
   id: string;
   round_id: string;
   name: string;
   arrival_order: number;
   team_id: string | null;
-  pin_slot: PinSlot | null;
   is_injured: boolean;
   joined_at: string;
 };

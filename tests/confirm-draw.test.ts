@@ -30,7 +30,7 @@ async function setupRound() {
 }
 
 describe("confirm_draw balances teams", () => {
-  it("splits evenly with no pinned players", async () => {
+  it("splits evenly and sends both teams straight to playing", async () => {
     const { round } = await setupRound();
 
     const { data, error } = await supabase.rpc("confirm_draw", {
@@ -42,61 +42,45 @@ describe("confirm_draw balances teams", () => {
     const { a, b } = await rosterSizes(round.id, team_a_id, team_b_id);
     expect(a).toBe(TEAM_SIZE);
     expect(b).toBe(TEAM_SIZE);
+
+    const { data: updatedRound } = await supabase
+      .from("rounds")
+      .select("current_home_team_id, current_away_team_id")
+      .eq("id", round.id)
+      .single();
+    expect([updatedRound!.current_home_team_id, updatedRound!.current_away_team_id].sort()).toEqual(
+      [team_a_id, team_b_id].sort(),
+    );
+
+    const { data: teamRows } = await supabase
+      .from("teams")
+      .select("status")
+      .in("id", [team_a_id, team_b_id]);
+    expect(teamRows!.every((t) => t.status === "playing")).toBe(true);
   });
 
-  it.each(["first", "second"] as const)(
-    "splits evenly with exactly one pinned player (%s slot)",
-    async (slot) => {
-      const { round, players } = await setupRound();
+  it("refuses a second draw on the same round", async () => {
+    const { round } = await setupRound();
 
-      const { error: pinError } = await supabase.rpc("set_pin", {
-        p_player_id: players[0].id,
-        p_pin_slot: slot,
-      });
-      expect(pinError).toBeNull();
+    const { error: firstError } = await supabase.rpc("confirm_draw", { p_round_id: round.id });
+    expect(firstError).toBeNull();
 
-      const { data, error } = await supabase.rpc("confirm_draw", {
-        p_round_id: round.id,
-      });
-      expect(error).toBeNull();
-      const [{ team_a_id, team_b_id }] = data!;
+    await addTestPlayers(
+      round.id,
+      Array.from({ length: TEAM_SIZE * 2 }, (_, i) => `Extra ${i + 1}`),
+    );
 
-      const { a, b } = await rosterSizes(round.id, team_a_id, team_b_id);
-      expect(a).toBe(TEAM_SIZE);
-      expect(b).toBe(TEAM_SIZE);
+    const { error: secondError } = await supabase.rpc("confirm_draw", { p_round_id: round.id });
+    expect(secondError).not.toBeNull();
+  });
 
-      const { data: pinnedPlayer } = await supabase
-        .from("players")
-        .select("team_id")
-        .eq("id", players[0].id)
-        .single();
-      expect(pinnedPlayer!.team_id).toBe(slot === "first" ? team_a_id : team_b_id);
-    },
-  );
+  it("refuses a draw before enough players have arrived", async () => {
+    const group = await createTestGroup();
+    groupId = group.id;
+    const round = await startTestRound(group.id, TEAM_SIZE);
+    await addTestPlayers(round.id, ["Only One"]);
 
-  it("splits evenly with both slots pinned", async () => {
-    const { round, players } = await setupRound();
-
-    await supabase.rpc("set_pin", { p_player_id: players[0].id, p_pin_slot: "first" });
-    await supabase.rpc("set_pin", { p_player_id: players[1].id, p_pin_slot: "second" });
-
-    const { data, error } = await supabase.rpc("confirm_draw", {
-      p_round_id: round.id,
-    });
-    expect(error).toBeNull();
-    const [{ team_a_id, team_b_id }] = data!;
-
-    const { a, b } = await rosterSizes(round.id, team_a_id, team_b_id);
-    expect(a).toBe(TEAM_SIZE);
-    expect(b).toBe(TEAM_SIZE);
-
-    const { data: pinned } = await supabase
-      .from("players")
-      .select("id, team_id")
-      .in("id", [players[0].id, players[1].id]);
-    const p0 = pinned!.find((p) => p.id === players[0].id);
-    const p1 = pinned!.find((p) => p.id === players[1].id);
-    expect(p0!.team_id).toBe(team_a_id);
-    expect(p1!.team_id).toBe(team_b_id);
+    const { error } = await supabase.rpc("confirm_draw", { p_round_id: round.id });
+    expect(error).not.toBeNull();
   });
 });

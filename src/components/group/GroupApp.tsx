@@ -11,7 +11,6 @@ import {
   removePlayer,
   renamePlayer,
   reshuffleDraw,
-  setPin,
   startRound,
 } from "@/lib/game/actions";
 import { queuedTeams } from "@/lib/game/derive";
@@ -107,10 +106,6 @@ export function GroupApp({ slug }: { slug: string }) {
       }}
       onRemover={async () => {
         if (sheetPlayer) await removePlayer(sheetPlayer.id);
-        setSheetPlayerId(null);
-      }}
-      onFixar={async (slot) => {
-        if (sheetPlayer) await setPin(sheetPlayer.id, slot);
         setSheetPlayerId(null);
       }}
     />
