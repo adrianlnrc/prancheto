@@ -40,7 +40,7 @@ export type Player = {
   joined_at: string;
 };
 
-export type MatchWinner = "home" | "away" | "draw";
+export type MatchWinner = "home" | "away";
 
 export type Match = {
   id: string;

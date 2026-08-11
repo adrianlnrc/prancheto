@@ -71,7 +71,7 @@ export async function reshuffleDraw(roundId: string, teamAId: string, teamBId: s
   if (error) throw error;
 }
 
-export async function recordMatchResult(roundId: string, winner: "home" | "away" | "draw") {
+export async function recordMatchResult(roundId: string, winner: "home" | "away") {
   const supabase = createClient();
   const { error } = await supabase.rpc("record_match_result", {
     p_round_id: roundId,

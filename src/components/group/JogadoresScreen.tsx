@@ -284,7 +284,9 @@ function DivididoPorTimes({
   players: Player[];
   onOpenSheet: (playerId: string) => void;
 }) {
-  const ordered = [...teams].sort((a, b) => a.label.localeCompare(b.label));
+  const ordered = [...teams]
+    .filter((t) => t.status !== "done")
+    .sort((a, b) => a.label.localeCompare(b.label));
   const waiting = waitingPlayers(players);
 
   function statusOf(t: Team) {

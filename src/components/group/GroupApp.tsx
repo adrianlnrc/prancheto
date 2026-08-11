@@ -166,20 +166,6 @@ export function GroupApp({ slug }: { slug: string }) {
             setScreen("pos");
             await recordMatchResult(round.id, winner);
           }}
-          onEmpate={async () => {
-            const home = data.teams.find((t) => t.id === round.current_home_team_id);
-            const away = data.teams.find((t) => t.id === round.current_away_team_id);
-            const queue = queuedTeams(data.teams);
-            setPosResult({
-              title: "Deu empate.",
-              subtitle: "Saem os dois. Entram os próximos.",
-              saiLabel: `Time ${home?.label ?? "?"} e Time ${away?.label ?? "?"}`,
-              entraLabel: queue[0] ? `Time ${queue[0].label}` : "ninguém ainda",
-              depoisLabel: queue[1] ? `Time ${queue[1].label}` : "—",
-            });
-            setScreen("pos");
-            await recordMatchResult(round.id, "draw");
-          }}
         />
         {sheet}
       </Shell>
