@@ -88,7 +88,7 @@ export async function markInjured(playerId: string) {
 
 export async function removePlayer(playerId: string) {
   const supabase = createClient();
-  const { error } = await supabase.from("players").delete().eq("id", playerId);
+  const { error } = await supabase.rpc("remove_player", { p_player_id: playerId });
   if (error) throw error;
 }
 
