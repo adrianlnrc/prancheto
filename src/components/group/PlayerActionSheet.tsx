@@ -3,34 +3,145 @@
 import { useState } from "react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
-import type { Player } from "@/lib/types";
+import type { Player, Team } from "@/lib/types";
+
+type Step = "root" | "pick-team" | "pick-swap";
 
 export function PlayerActionSheet({
   player,
+  teams,
+  players,
+  teamSize,
   onClose,
   onRename,
   onLesionado,
   onRemover,
-  onFixar,
+  onMove,
 }: {
   player: Player | null;
+  teams: Team[];
+  players: Player[];
+  teamSize: number;
   onClose: () => void;
   onRename: (name: string) => void;
   onLesionado: () => void;
   onRemover: () => void;
-  onFixar: (slot: "first" | "second" | null) => void;
+  onMove: (targetTeamId: string, swapOutPlayerId?: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(player?.name ?? "");
+  const [step, setStep] = useState<Step>("root");
+  const [swapTargetTeam, setSwapTargetTeam] = useState<Team | null>(null);
 
   if (!player) return null;
 
+  const currentTeam = teams.find((t) => t.id === player.team_id) ?? null;
+  const isPlayingNow = currentTeam?.status === "playing";
   const isWaiting = !player.team_id;
+  const canMove = !isPlayingNow;
+
+  const rosterOf = (teamId: string) => players.filter((p) => p.team_id === teamId);
+  const eligibleTeams = teams.filter(
+    (t) => t.status !== "playing" && t.status !== "done" && t.id !== player.team_id,
+  );
+
+  function close() {
+    setStep("root");
+    setSwapTargetTeam(null);
+    onClose();
+  }
+
+  function handlePickTeam(team: Team) {
+    const roster = rosterOf(team.id);
+    if (roster.length < teamSize) {
+      onMove(team.id);
+      close();
+    } else {
+      setSwapTargetTeam(team);
+      setStep("pick-swap");
+    }
+  }
+
+  function handlePickSwap(swapOut: Player) {
+    if (!swapTargetTeam) return;
+    onMove(swapTargetTeam.id, swapOut.id);
+    close();
+  }
+
+  if (step === "pick-team") {
+    return (
+      <BottomSheet open onClose={close}>
+        <div className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-ink-500">
+          Mover {player.name} pra
+        </div>
+        <div className="h-3" />
+        <div className="flex flex-col">
+          {eligibleTeams.length === 0 && (
+            <p className="py-4 font-body text-sm text-ink-500">
+              Nenhum outro time disponível agora.
+            </p>
+          )}
+          {eligibleTeams.map((t) => {
+            const roster = rosterOf(t.id);
+            const full = roster.length >= teamSize;
+            return (
+              <button
+                key={t.id}
+                onClick={() => handlePickTeam(t)}
+                className="flex items-center justify-between border-t border-ink-200 py-4 text-left font-display text-lg font-bold last:border-b"
+              >
+                <span>Time {t.label}</span>
+                <span className="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">
+                  {roster.length}/{teamSize}
+                  {full ? " · troca" : ""}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="h-3" />
+        <Button variant="ghost" fullWidth onClick={() => setStep("root")}>
+          Voltar
+        </Button>
+      </BottomSheet>
+    );
+  }
+
+  if (step === "pick-swap" && swapTargetTeam) {
+    const roster = rosterOf(swapTargetTeam.id);
+    return (
+      <BottomSheet open onClose={close}>
+        <div className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-ink-500">
+          Time {swapTargetTeam.label} tá completo
+        </div>
+        <div className="h-2" />
+        <div className="font-display text-xl font-black tracking-[-0.02em]">
+          Quem sai no lugar de {player.name}?
+        </div>
+        <div className="h-3" />
+        <div className="flex flex-col">
+          {roster.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => handlePickSwap(p)}
+              className="border-t border-ink-200 py-4 text-left font-display text-lg font-bold last:border-b"
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+        <div className="h-3" />
+        <Button variant="ghost" fullWidth onClick={() => setStep("pick-team")}>
+          Voltar
+        </Button>
+      </BottomSheet>
+    );
+  }
 
   return (
-    <BottomSheet open={!!player} onClose={onClose}>
+    <BottomSheet open onClose={close}>
       <div className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-ink-500">
-        {isWaiting ? "Na fila de espera" : "No time"}
+        {isPlayingNow ? "Em quadra agora" : isWaiting ? "Na fila de espera" : "No time"}
       </div>
       <div className="h-2" />
       {editing ? (
@@ -63,29 +174,10 @@ export function PlayerActionSheet({
           </Button>
         )}
 
-        {isWaiting && (
-          <div className="flex flex-col">
-            <button
-              onClick={() => onFixar("first")}
-              className="w-full border-t border-ink-200 py-4 text-left font-display text-lg font-bold"
-            >
-              Fixar no primeiro time da leva
-            </button>
-            <button
-              onClick={() => onFixar("second")}
-              className="w-full border-t border-b border-ink-200 py-4 text-left font-display text-lg font-bold"
-            >
-              Fixar no segundo time da leva
-            </button>
-            {player.pin_slot && (
-              <button
-                onClick={() => onFixar(null)}
-                className="w-full py-4 text-left font-display text-lg font-bold text-status-danger"
-              >
-                Tirar a fixação
-              </button>
-            )}
-          </div>
+        {canMove && (
+          <Button variant="outline" fullWidth onClick={() => setStep("pick-team")}>
+            Mover pra outro time
+          </Button>
         )}
 
         {!isWaiting && (
@@ -107,7 +199,7 @@ export function PlayerActionSheet({
         </button>
       </div>
       <div className="h-3" />
-      <Button variant="ghost" fullWidth onClick={onClose}>
+      <Button variant="ghost" fullWidth onClick={close}>
         Cancelar
       </Button>
     </BottomSheet>

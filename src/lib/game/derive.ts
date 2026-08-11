@@ -51,11 +51,7 @@ function longestStreak(matches: Match[]): { teamId: string; count: number } | nu
   let current: { teamId: string; count: number } | null = null;
 
   for (const m of matches) {
-    const winnerId = m.winner === "home" ? m.home_team_id : m.winner === "away" ? m.away_team_id : null;
-    if (!winnerId) {
-      current = null;
-      continue;
-    }
+    const winnerId = m.winner === "home" ? m.home_team_id : m.away_team_id;
     if (current && current.teamId === winnerId) {
       current = { teamId: winnerId, count: current.count + 1 };
     } else {
@@ -69,7 +65,6 @@ function longestStreak(matches: Match[]): { teamId: string; count: number } | nu
 export function matchLabel(m: Match, teams: Team[]): string {
   const home = teams.find((t) => t.id === m.home_team_id)?.label ?? "?";
   const away = teams.find((t) => t.id === m.away_team_id)?.label ?? "?";
-  if (m.winner === "draw") return `Empate — Time ${home} x Time ${away} — saíram os dois`;
   const winnerLabel = m.winner === "home" ? home : away;
   const loserLabel = m.winner === "home" ? away : home;
   return `Time ${winnerLabel} venceu Time ${loserLabel}`;

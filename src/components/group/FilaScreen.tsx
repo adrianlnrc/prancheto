@@ -11,7 +11,6 @@ export function FilaScreen({
   onGoTimes,
   onGoChegada,
   onVenceu,
-  onEmpate,
 }: {
   round: Round;
   teams: Team[];
@@ -19,7 +18,6 @@ export function FilaScreen({
   onGoTimes: () => void;
   onGoChegada: () => void;
   onVenceu: (winner: "home" | "away") => void;
-  onEmpate: () => void;
 }) {
   const home = teams.find((t) => t.id === round.current_home_team_id);
   const away = teams.find((t) => t.id === round.current_away_team_id);
@@ -145,9 +143,6 @@ export function FilaScreen({
           </Button>
           <Button fullWidth onClick={() => onVenceu("away")}>
             Time {away.label} venceu
-          </Button>
-          <Button size="md" variant="ghost" fullWidth onClick={onEmpate}>
-            Deu empate
           </Button>
         </div>
       </div>

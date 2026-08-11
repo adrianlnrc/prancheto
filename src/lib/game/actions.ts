@@ -52,15 +52,6 @@ export async function addPlayer(roundId: string, name: string) {
   return data;
 }
 
-export async function setPin(playerId: string, pinSlot: "first" | "second" | null) {
-  const supabase = createClient();
-  const { error } = await supabase.rpc("set_pin", {
-    p_player_id: playerId,
-    p_pin_slot: pinSlot,
-  });
-  if (error) throw error;
-}
-
 export async function confirmDraw(roundId: string) {
   const supabase = createClient();
   const { data, error } = await supabase.rpc("confirm_draw", {
@@ -80,11 +71,21 @@ export async function reshuffleDraw(roundId: string, teamAId: string, teamBId: s
   if (error) throw error;
 }
 
-export async function recordMatchResult(roundId: string, winner: "home" | "away" | "draw") {
+export async function recordMatchResult(roundId: string, winner: "home" | "away") {
   const supabase = createClient();
   const { error } = await supabase.rpc("record_match_result", {
     p_round_id: roundId,
     p_winner: winner,
+  });
+  if (error) throw error;
+}
+
+export async function movePlayer(playerId: string, targetTeamId: string, swapOutPlayerId?: string) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("move_player", {
+    p_player_id: playerId,
+    p_target_team_id: targetTeamId,
+    p_swap_out_player_id: swapOutPlayerId ?? null,
   });
   if (error) throw error;
 }
@@ -97,7 +98,7 @@ export async function markInjured(playerId: string) {
 
 export async function removePlayer(playerId: string) {
   const supabase = createClient();
-  const { error } = await supabase.from("players").delete().eq("id", playerId);
+  const { error } = await supabase.rpc("remove_player", { p_player_id: playerId });
   if (error) throw error;
 }
 

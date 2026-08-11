@@ -7,11 +7,11 @@ import {
   addPlayer,
   confirmDraw,
   markInjured,
+  movePlayer,
   recordMatchResult,
   removePlayer,
   renamePlayer,
   reshuffleDraw,
-  setPin,
   startRound,
 } from "@/lib/game/actions";
 import { queuedTeams } from "@/lib/game/derive";
@@ -96,6 +96,9 @@ export function GroupApp({ slug }: { slug: string }) {
   const sheet = (
     <PlayerActionSheet
       player={sheetPlayer}
+      teams={data.teams}
+      players={data.players}
+      teamSize={round.team_size}
       onClose={() => setSheetPlayerId(null)}
       onRename={async (name) => {
         if (sheetPlayer) await renamePlayer(sheetPlayer.id, name);
@@ -109,8 +112,8 @@ export function GroupApp({ slug }: { slug: string }) {
         if (sheetPlayer) await removePlayer(sheetPlayer.id);
         setSheetPlayerId(null);
       }}
-      onFixar={async (slot) => {
-        if (sheetPlayer) await setPin(sheetPlayer.id, slot);
+      onMove={async (targetTeamId, swapOutPlayerId) => {
+        if (sheetPlayer) await movePlayer(sheetPlayer.id, targetTeamId, swapOutPlayerId);
         setSheetPlayerId(null);
       }}
     />
@@ -162,20 +165,6 @@ export function GroupApp({ slug }: { slug: string }) {
             });
             setScreen("pos");
             await recordMatchResult(round.id, winner);
-          }}
-          onEmpate={async () => {
-            const home = data.teams.find((t) => t.id === round.current_home_team_id);
-            const away = data.teams.find((t) => t.id === round.current_away_team_id);
-            const queue = queuedTeams(data.teams);
-            setPosResult({
-              title: "Deu empate.",
-              subtitle: "Saem os dois. Entram os próximos.",
-              saiLabel: `Time ${home?.label ?? "?"} e Time ${away?.label ?? "?"}`,
-              entraLabel: queue[0] ? `Time ${queue[0].label}` : "ninguém ainda",
-              depoisLabel: queue[1] ? `Time ${queue[1].label}` : "—",
-            });
-            setScreen("pos");
-            await recordMatchResult(round.id, "draw");
           }}
         />
         {sheet}
