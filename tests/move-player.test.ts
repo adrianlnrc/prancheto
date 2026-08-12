@@ -118,11 +118,34 @@ describe("move_player", () => {
     expect(error).not.toBeNull();
   });
 
-  it("refuses to move a player into a team that is playing", async () => {
+  it("swaps a player into a team that is playing", async () => {
     const round = await newRound();
     const teamX = await insertTestTeam(round.id, "X", "forming");
     const teamY = await insertTestTeam(round.id, "Y", "playing");
     const p1 = await insertPlayerDirect(round.id, "P1", teamX.id);
+    const q1 = await insertPlayerDirect(round.id, "Q1", teamY.id);
+    await insertPlayerDirect(round.id, "Q2", teamY.id);
+    await insertPlayerDirect(round.id, "Q3", teamY.id);
+
+    const { error } = await supabase.rpc("move_player", {
+      p_player_id: p1.id,
+      p_target_team_id: teamY.id,
+      p_swap_out_player_id: q1.id,
+    });
+    expect(error).toBeNull();
+
+    expect(await teamIdOf(p1.id)).toBe(teamY.id);
+    expect(await teamIdOf(q1.id)).toBe(teamX.id);
+  });
+
+  it("refuses to move into a playing team without a swap_out player", async () => {
+    const round = await newRound();
+    const teamX = await insertTestTeam(round.id, "X", "forming");
+    const teamY = await insertTestTeam(round.id, "Y", "playing");
+    const p1 = await insertPlayerDirect(round.id, "P1", teamX.id);
+    await insertPlayerDirect(round.id, "Q1", teamY.id);
+    await insertPlayerDirect(round.id, "Q2", teamY.id);
+    await insertPlayerDirect(round.id, "Q3", teamY.id);
 
     const { error } = await supabase.rpc("move_player", {
       p_player_id: p1.id,
@@ -174,26 +197,5 @@ describe("move_player", () => {
 
     expect(await teamIdOf(waiting.id)).toBe(teamY.id);
     expect(await teamIdOf(q1.id)).toBeNull();
-  });
-
-  it("clears is_injured when moving a previously-injured waiting player onto a team", async () => {
-    const round = await newRound();
-    const teamX = await insertTestTeam(round.id, "X", "forming");
-    const waiting = await insertWaitingPlayer(round.id, "Was Injured");
-    await supabase.from("players").update({ is_injured: true }).eq("id", waiting.id);
-
-    const { error } = await supabase.rpc("move_player", {
-      p_player_id: waiting.id,
-      p_target_team_id: teamX.id,
-    });
-    expect(error).toBeNull();
-
-    const { data } = await supabase
-      .from("players")
-      .select("team_id, is_injured")
-      .eq("id", waiting.id)
-      .single();
-    expect(data!.team_id).toBe(teamX.id);
-    expect(data!.is_injured).toBe(false);
   });
 });

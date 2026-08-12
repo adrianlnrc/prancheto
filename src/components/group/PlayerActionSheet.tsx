@@ -15,7 +15,7 @@ export function PlayerActionSheet({
   teamSize,
   onClose,
   onRename,
-  onLesionado,
+  onSair,
   onRemover,
   onMove,
 }: {
@@ -25,7 +25,7 @@ export function PlayerActionSheet({
   teamSize: number;
   onClose: () => void;
   onRename: (name: string) => void;
-  onLesionado: () => void;
+  onSair: () => void;
   onRemover: () => void;
   onMove: (targetTeamId: string, swapOutPlayerId?: string) => void;
 }) {
@@ -42,9 +42,7 @@ export function PlayerActionSheet({
   const canMove = !isPlayingNow;
 
   const rosterOf = (teamId: string) => players.filter((p) => p.team_id === teamId);
-  const eligibleTeams = teams.filter(
-    (t) => t.status !== "playing" && t.status !== "done" && t.id !== player.team_id,
-  );
+  const eligibleTeams = teams.filter((t) => t.status !== "done" && t.id !== player.team_id);
 
   function close() {
     setStep("root");
@@ -165,8 +163,8 @@ export function PlayerActionSheet({
 
         {!isWaiting && (
           <div>
-            <Button variant="outline" fullWidth onClick={onLesionado}>
-              Saiu machucado
+            <Button variant="outline" fullWidth onClick={onSair}>
+              Saiu
             </Button>
             <div className="pt-1.5 text-center font-body text-xs text-ink-500">
               Sai da lista e entra o primeiro de fora.

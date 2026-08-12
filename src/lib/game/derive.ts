@@ -21,11 +21,20 @@ export function playersByTeam(players: Player[], teamId: string): Player[] {
   return players.filter((p) => p.team_id === teamId);
 }
 
-/** Teams currently waiting their turn, ordered front-to-back of the queue. */
+/** Teams currently waiting their turn, ordered front-to-back of the queue.
+ * Includes incomplete ("forming") teams — record_match_result brings
+ * whoever's next in line onto the court even if it's short-staffed, so a
+ * forming team is a real candidate to enter, not just queued ones. */
 export function queuedTeams(teams: Team[]): Team[] {
   return teams
-    .filter((t) => t.status === "queued")
-    .sort((a, b) => (a.queue_position ?? 0) - (b.queue_position ?? 0));
+    .filter((t) => t.status === "queued" || t.status === "forming")
+    .sort((a, b) => {
+      const aQueued = a.queue_position != null;
+      const bQueued = b.queue_position != null;
+      if (aQueued !== bQueued) return aQueued ? -1 : 1;
+      if (aQueued && bQueued) return (a.queue_position as number) - (b.queue_position as number);
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
 }
 
 export function playingTeams(round: Round, teams: Team[]): { home: Team | null; away: Team | null } {

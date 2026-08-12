@@ -36,8 +36,6 @@ export type Player = {
   name: string;
   arrival_order: number;
   team_id: string | null;
-  is_injured: boolean;
-  consecutive_matches: number;
   joined_at: string;
 };
 

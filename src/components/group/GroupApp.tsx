@@ -7,8 +7,8 @@ import {
   addPlayer,
   confirmDraw,
   createTeam,
-  markInjured,
   movePlayer,
+  playerLeave,
   recordMatchResult,
   removePlayer,
   renamePlayer,
@@ -41,47 +41,29 @@ function Loading() {
 }
 
 /** Builds the post-match summary from what record_match_result actually did
- * — never guessed ahead of time, since the loser doesn't always fully leave
- * (case 1) and sometimes doesn't leave at all (case 2). */
+ * — never guessed ahead of time, since the loser sometimes stays on court
+ * (no_change) when there's nobody left to bring in. */
 function posResultFromOutcome(result: MatchOutcome): PosResult {
   const winner = `Time ${result.winner_label}`;
   const title = `${winner} ficou.`;
 
-  switch (result.outcome) {
-    case "no_change":
-      return {
-        title,
-        subtitle: "Ninguém disponível pra substituir agora — os times continuam os mesmos.",
-        saiLabel: "ninguém",
-        entraLabel: "ninguém",
-        depoisLabel: "—",
-      };
-    case "case1":
-      return {
-        title,
-        subtitle: `Time ${result.entering_label} entra incompleto, completado por quem perdeu.`,
-        saiLabel: `Time ${result.loser_label}`,
-        entraLabel: `Time ${result.entering_label}`,
-        depoisLabel: "—",
-      };
-    case "case2":
-      return {
-        title,
-        subtitle: `Time ${result.loser_label} continua — só troca quem tava jogando sem parar.`,
-        saiLabel: result.subs_out.join(", "),
-        entraLabel: result.subs_in.join(", "),
-        depoisLabel: "—",
-      };
-    case "full_swap":
-    default:
-      return {
-        title,
-        subtitle: "Perdeu sai. Entra o próximo da fila.",
-        saiLabel: `Time ${result.loser_label}`,
-        entraLabel: `Time ${result.entering_label}`,
-        depoisLabel: "—",
-      };
+  if (result.outcome === "no_change") {
+    return {
+      title,
+      subtitle: "Ninguém disponível pra substituir agora — os times continuam os mesmos.",
+      saiLabel: "ninguém",
+      entraLabel: "ninguém",
+      depoisLabel: "—",
+    };
   }
+
+  return {
+    title,
+    subtitle: "Perdeu sai. Entra o próximo da fila.",
+    saiLabel: `Time ${result.loser_label}`,
+    entraLabel: `Time ${result.entering_label}`,
+    depoisLabel: result.subs_in.length > 0 ? `Reforçado por ${result.subs_in.join(", ")}` : "—",
+  };
 }
 
 export function GroupApp({ slug }: { slug: string }) {
@@ -159,8 +141,8 @@ export function GroupApp({ slug }: { slug: string }) {
         if (sheetPlayer) await renamePlayer(sheetPlayer.id, name);
         setSheetPlayerId(null);
       }}
-      onLesionado={async () => {
-        if (sheetPlayer) await markInjured(sheetPlayer.id);
+      onSair={async () => {
+        if (sheetPlayer) await playerLeave(sheetPlayer.id);
         setSheetPlayerId(null);
       }}
       onRemover={async () => {

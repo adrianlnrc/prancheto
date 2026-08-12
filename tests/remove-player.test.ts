@@ -82,7 +82,7 @@ describe("remove_player", () => {
     expect(await playerExists(players[0].id)).toBe(false);
   });
 
-  it("skips injured players when picking a replacement", async () => {
+  it("picks the earliest-arrived waiting player as the replacement", async () => {
     const group = await createTestGroup();
     groupId = group.id;
     const round = await startTestRound(group.id, TEAM_SIZE);
@@ -93,9 +93,8 @@ describe("remove_player", () => {
     const { data: draw } = await supabase.rpc("confirm_draw", { p_round_id: round.id });
     const [{ team_a_id }] = draw!;
 
-    const injuredExtra = await insertWaitingPlayer(round.id, "Injured Extra");
-    const healthyExtra = await insertWaitingPlayer(round.id, "Healthy Extra");
-    await supabase.rpc("mark_injured", { p_player_id: injuredExtra.id });
+    const earlier = await insertWaitingPlayer(round.id, "Earlier");
+    const later = await insertWaitingPlayer(round.id, "Later");
 
     const { data: teamAPlayers } = await supabase
       .from("players")
@@ -106,6 +105,7 @@ describe("remove_player", () => {
 
     const { error } = await supabase.rpc("remove_player", { p_player_id: targetId });
     expect(error).toBeNull();
-    expect(await teamIdOf(healthyExtra.id)).toBe(team_a_id);
+    expect(await teamIdOf(earlier.id)).toBe(team_a_id);
+    expect(await teamIdOf(later.id)).toBeNull();
   });
 });

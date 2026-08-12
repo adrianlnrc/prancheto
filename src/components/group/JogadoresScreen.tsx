@@ -249,7 +249,7 @@ function ListaCompleta({
 
       <div className="h-2" />
       <p className="font-body text-xs text-ink-400">
-        Toque e segure um nome pra editar, marcar machucado ou tirar da lista.
+        Toque e segure um nome pra editar, tirar do time ou tirar da lista.
       </p>
     </div>
   );
@@ -265,7 +265,7 @@ function ArrivalRow({
   onOpenSheet: (playerId: string) => void;
 }) {
   const isWaiting = !p.team_id;
-  const status = p.team_id ? "num time" : p.is_injured ? "machucado" : "esperando";
+  const status = p.team_id ? "num time" : "esperando";
 
   return (
     <PressableRow
@@ -286,7 +286,7 @@ function ArrivalRow({
       <span
         className={[
           "font-display text-[11px] font-bold uppercase tracking-[0.14em]",
-          p.team_id ? "text-ink-500" : p.is_injured ? "text-status-danger" : "text-ink-300",
+          p.team_id ? "text-ink-500" : "text-ink-300",
         ].join(" ")}
       >
         {status}
@@ -455,11 +455,11 @@ function TeamCard({
   statusLabel: string;
   onOpenSheet: (playerId: string) => void;
 }) {
-  // Playing teams never accept a drop (move_player already refuses that);
-  // a player's own team is excluded too — dropping there would be a no-op.
-  // Full forming/queued teams ARE droppable — landing there opens the
-  // "quem sai" swap step (#25) instead of moving directly.
-  const droppable = !playing && !ownTeamOfDragged;
+  // A player's own team is excluded — dropping there would be a no-op.
+  // Any other team is droppable, including one that's playing: landing on
+  // a full team (forming/queued/playing, all at team_size) opens the "quem
+  // sai" swap step instead of moving directly.
+  const droppable = !ownTeamOfDragged;
   const { setNodeRef, isOver } = useDroppable({ id: t.id, disabled: !droppable });
 
   return (
@@ -497,11 +497,9 @@ function TeamCard({
         {roster.length} de {round.team_size}
         {roster.length >= round.team_size
           ? " — completo"
-          : roster.length >= 3
-            ? ` — falta ${round.team_size - roster.length}, completa com quem perder`
-            : roster.length > 0
-              ? ` — falta ${round.team_size - roster.length}, entra por substituição no time que perder`
-              : " — falta gente"}
+          : roster.length > 0
+            ? ` — falta ${round.team_size - roster.length}, entra quando alguém perder`
+            : " — falta gente"}
       </div>
     </div>
   );
@@ -564,11 +562,6 @@ function WaitingRow({
         {String(n).padStart(2, "0")}
       </span>
       <span className="flex-1 font-display text-lg font-bold">{p.name}</span>
-      {p.is_injured && (
-        <span className="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-status-danger">
-          machucado
-        </span>
-      )}
     </PressableRow>
   );
 }

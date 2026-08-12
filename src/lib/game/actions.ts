@@ -72,7 +72,7 @@ export async function reshuffleDraw(roundId: string, teamAId: string, teamBId: s
 }
 
 export type MatchOutcome = {
-  outcome: "no_change" | "full_swap" | "case1" | "case2";
+  outcome: "no_change" | "rotated";
   winner_label: string;
   loser_label: string;
   entering_label: string | null;
@@ -110,9 +110,9 @@ export async function movePlayer(playerId: string, targetTeamId: string, swapOut
   if (error) throw error;
 }
 
-export async function markInjured(playerId: string) {
+export async function playerLeave(playerId: string) {
   const supabase = createClient();
-  const { error } = await supabase.rpc("mark_injured", { p_player_id: playerId });
+  const { error } = await supabase.rpc("player_leave", { p_player_id: playerId });
   if (error) throw error;
 }
 
