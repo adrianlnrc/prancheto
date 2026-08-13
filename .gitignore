@@ -41,3 +41,7 @@ next-env.d.ts
 
 # supabase CLI
 supabase/.temp
+
+# claude code (local settings, worktrees, installed skills)
+/.claude/
+/.agents/
