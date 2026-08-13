@@ -7,14 +7,19 @@ export function waitingPlayers(players: Player[]): Player[] {
     .sort((a, b) => a.arrival_order - b.arrival_order);
 }
 
+/** Minimum waiting players before the initial draw unlocks — one per side.
+ * The draw is available on demand from here on; there's no team_size-based
+ * threshold anymore (see #unified_free_slot_assignment). */
+const MIN_PLAYERS_FOR_DRAW = 2;
+
 /** How many more arrivals are needed before the next draw unlocks. */
-export function missingForNextDraw(players: Player[], teamSize: number): number {
+export function missingForNextDraw(players: Player[]): number {
   const waiting = waitingPlayers(players).length;
-  return Math.max(0, teamSize * 2 - waiting);
+  return Math.max(0, MIN_PLAYERS_FOR_DRAW - waiting);
 }
 
-export function canDraw(players: Player[], teamSize: number): boolean {
-  return missingForNextDraw(players, teamSize) === 0;
+export function canDraw(players: Player[]): boolean {
+  return missingForNextDraw(players) === 0;
 }
 
 export function playersByTeam(players: Player[], teamId: string): Player[] {

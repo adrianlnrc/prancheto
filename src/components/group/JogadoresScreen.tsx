@@ -13,12 +13,14 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { Button } from "@/components/ui/Button";
+import { BottomSheet } from "@/components/ui/BottomSheet";
 import { PressableRow } from "./PressableRow";
 import { SwapPicker } from "./SwapPicker";
 import { NavIconButton } from "./NavIconButton";
 import ballIcon from "./assets/ball.png";
 import type { Group, Player, Round, Team } from "@/lib/types";
 import { canDraw, missingForNextDraw, waitingPlayers } from "@/lib/game/derive";
+import { useLongPress } from "@/hooks/useLongPress";
 
 const NEW_TEAM_DROP_ID = "__new_team__";
 
@@ -38,6 +40,7 @@ export function JogadoresScreen({
   onSortearNovo,
   onMovePlayer,
   onCreateTeam,
+  onRenameTeam,
 }: {
   group: Group;
   round: Round;
@@ -50,6 +53,7 @@ export function JogadoresScreen({
   onSortearNovo: (teamAId: string, teamBId: string) => Promise<void>;
   onMovePlayer: (playerId: string, targetTeamId: string, swapOutPlayerId?: string) => void;
   onCreateTeam: (playerId: string) => void;
+  onRenameTeam: (teamId: string, label: string) => void;
 }) {
   const [view, setView] = useState<View>("lista");
   const [novoNome, setNovoNome] = useState("");
@@ -57,8 +61,8 @@ export function JogadoresScreen({
   const [revealedDraw, setRevealedDraw] = useState<Draw | null>(null);
 
   const hasDrawn = !!round.current_home_team_id;
-  const faltam = missingForNextDraw(players, round.team_size);
-  const podeSortear = !hasDrawn && canDraw(players, round.team_size);
+  const faltam = missingForNextDraw(players);
+  const podeSortear = !hasDrawn && canDraw(players);
 
   function handleAdd() {
     const name = novoNome.trim();
@@ -99,7 +103,7 @@ export function JogadoresScreen({
             {group.name}
           </div>
           <div className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-ink-500">
-            Rodada ativa · {round.team_size} por time
+            Jogo ativo · {round.team_size} por time
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -162,10 +166,8 @@ export function JogadoresScreen({
               </div>
               <div className="font-display text-[15px] font-bold uppercase tracking-[0.02em] leading-[1.25]">
                 {faltam === 0
-                  ? "deu 2 times — pode sortear"
-                  : faltam === 1
-                    ? "falta 1 pro sorteio inicial"
-                    : "faltam pro sorteio inicial"}
+                  ? "já dá pra sortear os times"
+                  : "falta 1 pra poder sortear"}
               </div>
             </div>
           )}
@@ -186,6 +188,7 @@ export function JogadoresScreen({
               onOpenSheet={onOpenSheet}
               onMovePlayer={onMovePlayer}
               onCreateTeam={onCreateTeam}
+              onRenameTeam={onRenameTeam}
             />
           )}
         </>
@@ -302,6 +305,7 @@ function DivididoPorTimes({
   onOpenSheet,
   onMovePlayer,
   onCreateTeam,
+  onRenameTeam,
 }: {
   round: Round;
   teams: Team[];
@@ -309,11 +313,14 @@ function DivididoPorTimes({
   onOpenSheet: (playerId: string) => void;
   onMovePlayer: (playerId: string, targetTeamId: string, swapOutPlayerId?: string) => void;
   onCreateTeam: (playerId: string) => void;
+  onRenameTeam: (teamId: string, label: string) => void;
 }) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [swapPrompt, setSwapPrompt] = useState<{ playerId: string; teamId: string } | null>(
     null,
   );
+  const [renamingTeam, setRenamingTeam] = useState<Team | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
@@ -382,20 +389,30 @@ function DivididoPorTimes({
               ownTeamOfDragged={!!draggingPlayer && draggingPlayer.team_id === t.id}
               statusLabel={statusOf(t)}
               onOpenSheet={onOpenSheet}
+              onLongPressHeader={() => {
+                setRenameValue(t.label);
+                setRenamingTeam(t);
+              }}
             />
           );
         })}
 
         <NewTeamDropZone />
 
-        <div>
-          <div className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-yellow-700">
-            De fora ({waiting.length})
+        {waiting.length > 0 && (
+          <div>
+            <div className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-yellow-700">
+              De fora ({waiting.length})
+            </div>
+            {waiting.map((p, i) => (
+              <WaitingRow key={p.id} player={p} n={i + 1} onOpenSheet={onOpenSheet} />
+            ))}
           </div>
-          {waiting.map((p, i) => (
-            <WaitingRow key={p.id} player={p} n={i + 1} onOpenSheet={onOpenSheet} />
-          ))}
-        </div>
+        )}
+        {/* Some vazio depois do 1º sorteio: assign_free_players sempre
+            encaixa jogador livre em algum time (mesmo criando um novo), então
+            não fica ninguém "solto" nessa fase. Antes do sorteio ainda tem
+            função — dá pra montar time na mão arrastando pra "+ novo time". */}
       </div>
 
       <DragOverlay>
@@ -418,6 +435,37 @@ function DivididoPorTimes({
           onClose={() => setSwapPrompt(null)}
         />
       )}
+
+      <BottomSheet open={!!renamingTeam} onClose={() => setRenamingTeam(null)}>
+        <div className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-ink-500">
+          Renomear time
+        </div>
+        <div className="h-2" />
+        <input
+          autoFocus
+          value={renameValue}
+          onChange={(e) => setRenameValue(e.target.value)}
+          className="w-full border-b-2 border-ink-900 font-display text-3xl font-black tracking-[-0.02em] focus:outline-none"
+        />
+        <div className="h-5" />
+        <div className="flex flex-col gap-3">
+          <Button
+            fullWidth
+            disabled={!renameValue.trim()}
+            onClick={() => {
+              if (renamingTeam && renameValue.trim()) {
+                onRenameTeam(renamingTeam.id, renameValue.trim());
+              }
+              setRenamingTeam(null);
+            }}
+          >
+            Salvar
+          </Button>
+          <Button variant="ghost" fullWidth onClick={() => setRenamingTeam(null)}>
+            Cancelar
+          </Button>
+        </div>
+      </BottomSheet>
     </DndContext>
   );
 }
@@ -446,6 +494,7 @@ function TeamCard({
   ownTeamOfDragged,
   statusLabel,
   onOpenSheet,
+  onLongPressHeader,
 }: {
   team: Team;
   roster: Player[];
@@ -454,6 +503,7 @@ function TeamCard({
   ownTeamOfDragged: boolean;
   statusLabel: string;
   onOpenSheet: (playerId: string) => void;
+  onLongPressHeader: () => void;
 }) {
   // A player's own team is excluded — dropping there would be a no-op.
   // Any other team is droppable, including one that's playing: landing on
@@ -461,6 +511,7 @@ function TeamCard({
   // sai" swap step instead of moving directly.
   const droppable = !ownTeamOfDragged;
   const { setNodeRef, isOver } = useDroppable({ id: t.id, disabled: !droppable });
+  const longPress = useLongPress(onLongPressHeader);
 
   return (
     <div
@@ -471,8 +522,9 @@ function TeamCard({
       ].join(" ")}
     >
       <div
+        {...longPress}
         className={[
-          "flex items-center justify-between gap-2 px-3.5 py-3",
+          "flex items-center justify-between gap-2 px-3.5 py-3 select-none",
           playing ? "bg-yellow-500" : "bg-paper-2",
         ].join(" ")}
       >

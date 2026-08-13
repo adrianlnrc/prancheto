@@ -113,14 +113,25 @@ describe("record_match_result", () => {
     expect(await teamStatus(nextTeam.id)).toBe("playing");
     expect(await teamStatus(awayId)).toBe("done");
 
-    // The whole loser roster went back to team_id null — nobody is stranded.
+    // The whole loser roster gets swept into a fresh team by
+    // assign_free_players instead of sitting unassigned — nobody stays
+    // team-less anymore (see #unified_free_slot_assignment).
+    const { data: allTeams } = await supabase
+      .from("teams")
+      .select("id, status")
+      .eq("round_id", round.id);
+    const newTeam = allTeams!.find(
+      (t) => t.id !== homeId && t.id !== awayId && t.id !== nextTeam.id,
+    );
+    expect(newTeam).toBeDefined();
+    expect(newTeam!.status).toBe("queued"); // exactly TEAM_SIZE loser players, so it's full
     for (const id of loserRoster) {
-      expect(await teamIdOf(id)).toBeNull();
+      expect(await teamIdOf(id)).toBe(newTeam!.id);
     }
   });
 
   it("tops off a short queued team with the dissolved loser's players, in original order", async () => {
-    const { round, awayId } = await setupPlayingRound();
+    const { round, homeId, awayId } = await setupPlayingRound();
     const loserRoster = await rosterIds(awayId);
 
     const nextTeam = await insertTestTeam(round.id, "C", "queued");
@@ -150,14 +161,23 @@ describe("record_match_result", () => {
     expect(await teamStatus(nextTeam.id)).toBe("playing");
     expect(await teamStatus(awayId)).toBe("done");
 
-    // The rest of the loser waits, nobody left team-less permanently.
+    // The rest of the loser gets folded into a new forming team together —
+    // nobody sits team-less anymore.
+    const { data: allTeams } = await supabase
+      .from("teams")
+      .select("id, status")
+      .eq("round_id", round.id);
+    const newTeam = allTeams!.find(
+      (t) => t.id !== homeId && t.id !== awayId && t.id !== nextTeam.id,
+    );
+    expect(newTeam).toBeDefined();
     for (const id of loserRoster.slice(1)) {
-      expect(await teamIdOf(id)).toBeNull();
+      expect(await teamIdOf(id)).toBe(newTeam!.id);
     }
   });
 
   it("cascades into a second team down the queue once the first is topped off", async () => {
-    const { round, awayId } = await setupPlayingRound();
+    const { round, homeId, awayId } = await setupPlayingRound();
     const loserRoster = await rosterIds(awayId); // 4 players
 
     const teamC = await insertTestTeam(round.id, "C", "queued");
@@ -188,7 +208,19 @@ describe("record_match_result", () => {
     const dRosterAfter = await rosterIds(teamD.id);
     expect(dRosterAfter).toHaveLength(TEAM_SIZE);
     expect(dRosterAfter).toEqual(expect.arrayContaining([...dRoster, loserRoster[1], loserRoster[2]]));
-    expect(await teamIdOf(loserRoster[3])).toBeNull();
+
+    // The one leftover loser player — nobody else had room — seeds a brand
+    // new forming team on their own instead of sitting team-less.
+    const { data: allTeams } = await supabase
+      .from("teams")
+      .select("id, status")
+      .eq("round_id", round.id);
+    const newTeam = allTeams!.find(
+      (t) => ![homeId, awayId, teamC.id, teamD.id].includes(t.id),
+    );
+    expect(newTeam).toBeDefined();
+    expect(newTeam!.status).toBe("forming"); // only 1 of TEAM_SIZE
+    expect(await teamIdOf(loserRoster[3])).toBe(newTeam!.id);
   });
 
   it("reported bug: a short third team still fully replaces the loser, not just part of it", async () => {

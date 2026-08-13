@@ -25,7 +25,7 @@ export function SemRodadaScreen({
             {group.name}
           </div>
           <div className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-ink-500">
-            Sem rodada
+            Jogo
           </div>
         </div>
         {pastRounds.length > 0 && (
@@ -69,7 +69,7 @@ export function SemRodadaScreen({
           <>
             <div className="h-9" />
             <div className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-ink-500">
-              Última rodada
+              Último jogo
             </div>
             <div className="h-2" />
             <div className="font-body text-sm text-ink-600">

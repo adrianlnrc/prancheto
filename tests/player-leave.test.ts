@@ -48,9 +48,21 @@ describe("player_leave", () => {
     const { error } = await supabase.rpc("player_leave", { p_player_id: leavingId });
     expect(error).toBeNull();
 
-    expect(await teamIdOf(leavingId)).toBeNull();
+    // Earlier was first in line, so they take the freed spot on team A.
     expect(await teamIdOf(earlier.id)).toBe(team_a_id);
-    expect(await teamIdOf(later.id)).toBeNull();
+
+    // Later and the player who just left have nowhere existing to go (team
+    // A is full again, team B never had room) — assign_free_players folds
+    // them into a new forming team together instead of leaving them
+    // unassigned (see #unified_free_slot_assignment).
+    const { data: allTeams } = await supabase
+      .from("teams")
+      .select("id, status")
+      .eq("round_id", round.id);
+    const newTeam = allTeams!.find((t) => t.id !== team_a_id && t.status !== "playing");
+    expect(newTeam).toBeDefined();
+    expect(await teamIdOf(leavingId)).toBe(newTeam!.id);
+    expect(await teamIdOf(later.id)).toBe(newTeam!.id);
   });
 
   it("works the same whether the player is on court or on the bench", async () => {

@@ -127,3 +127,9 @@ export async function renamePlayer(playerId: string, name: string) {
   const { error } = await supabase.from("players").update({ name }).eq("id", playerId);
   if (error) throw error;
 }
+
+export async function renameTeam(teamId: string, label: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from("teams").update({ label }).eq("id", teamId);
+  if (error) throw error;
+}

@@ -44,7 +44,7 @@ export function HistoricoScreen({
     <div className="flex flex-1 flex-col min-h-0">
       <div className="flex items-center justify-between border-b border-ink-200 px-5 py-4">
         <div className="font-display text-lg font-black leading-[1.1] tracking-[-0.01em]">
-          Rodadas passadas
+          Jogos passados
         </div>
         <button
           onClick={onFechar}
@@ -57,7 +57,7 @@ export function HistoricoScreen({
       <div className="flex-1 overflow-auto px-5 py-2">
         {pastRounds.length === 0 && (
           <p className="py-6 text-center font-body text-sm text-ink-500">
-            Nenhuma rodada encerrada ainda.
+            Nenhum jogo encerrado ainda.
           </p>
         )}
         {pastRounds.map((r) => {

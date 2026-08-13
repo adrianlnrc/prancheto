@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useGroupRealtime } from "@/hooks/useGroupRealtime";
-import { getSavedName, saveName } from "@/lib/localName";
+import { getSavedName, hasJoinedRound, markJoinedRound, saveName } from "@/lib/localName";
 import {
   addPlayer,
   confirmDraw,
@@ -12,6 +12,7 @@ import {
   recordMatchResult,
   removePlayer,
   renamePlayer,
+  renameTeam,
   reshuffleDraw,
   startRound,
   type MatchOutcome,
@@ -78,6 +79,19 @@ export function GroupApp({ slug }: { slug: string }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMyName(getSavedName(slug));
   }, [slug]);
+
+  useEffect(() => {
+    // Digitar o nome (EntrarScreen) só identifica o dispositivo — sem isso,
+    // a pessoa aparecia "logada" mas nunca entrava na lista de verdade. Assim
+    // que existir uma rodada aberta, o nome salvo entra na fila igual quem
+    // digitou "+ Chegou" — uma vez só por rodada por dispositivo.
+    if (!myName || !data.round) return;
+    const roundId = data.round.id;
+    if (hasJoinedRound(roundId)) return;
+    markJoinedRound(roundId);
+    addPlayer(roundId, myName).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myName, data.round?.id]);
 
   if (myName === undefined || data.loading) {
     return <Shell><Loading /></Shell>;
@@ -215,6 +229,9 @@ export function GroupApp({ slug }: { slug: string }) {
         onCreateTeam={async (playerId) => {
           const team = await createTeam(round.id);
           await movePlayer(playerId, team.id);
+        }}
+        onRenameTeam={async (teamId, label) => {
+          await renameTeam(teamId, label);
         }}
       />
       {sheet}

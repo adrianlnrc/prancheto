@@ -106,6 +106,17 @@ describe("remove_player", () => {
     const { error } = await supabase.rpc("remove_player", { p_player_id: targetId });
     expect(error).toBeNull();
     expect(await teamIdOf(earlier.id)).toBe(team_a_id);
-    expect(await teamIdOf(later.id)).toBeNull();
+
+    // Later has nowhere existing to go once team A is full again and team B
+    // never had room — assign_free_players opens a new forming team for
+    // them instead of leaving them unassigned (see
+    // #unified_free_slot_assignment).
+    const { data: allTeams } = await supabase
+      .from("teams")
+      .select("id, status")
+      .eq("round_id", round.id);
+    const newTeam = allTeams!.find((t) => t.id !== team_a_id && t.status !== "playing");
+    expect(newTeam).toBeDefined();
+    expect(await teamIdOf(later.id)).toBe(newTeam!.id);
   });
 });
